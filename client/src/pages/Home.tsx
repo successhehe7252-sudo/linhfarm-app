@@ -1,25 +1,88 @@
-import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
-import { Streamdown } from 'streamdown';
+/* Vườn Sáng: mobile-first editorial rhythm, leaf-green actions, warm paper surfaces, and tactile operational feedback. */
+import { useMemo, useState } from "react";
+import { toast } from "sonner";
+import {
+  ArrowDownToLine, ArrowUpRight, BarChart3, Bell, Boxes, Check, ChevronDown,
+  CircleDollarSign, ClipboardList, Copy, CreditCard, FileText, Grid2X2,
+  Leaf, Menu, MoreHorizontal, PackagePlus, Plus, Printer, Search, Settings,
+  ShoppingBasket, ShoppingCart, Sparkles, Store, Trash2, TrendingUp, Truck,
+  WalletCards, X, Minus, ScanLine
+} from "lucide-react";
+import { Bar, BarChart, CartesianGrid, Cell, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
-/**
- * All content in this page are only for example, replace with your own feature implementation
- * When building pages, remember your instructions in Frontend Best Practices, Design Guide and Common Pitfalls
- */
-export default function Home() {
-  // If theme is switchable in App.tsx, we can implement theme toggling like this:
-  // const { theme, toggleTheme } = useTheme();
+const assets = {
+  logo: "/manus-storage/linhfarm-logo_22e69a6b.png",
+  strawberry: "/manus-storage/linhfarm-strawberry_2d520d42.jpg",
+  tomato: "/manus-storage/linhfarm-cherry-tomato_b162fddc.jpg",
+  cabbage: "/manus-storage/linhfarm-cabbage_84c4bca3.jpg",
+  potato: "/manus-storage/linhfarm-sweet-potato_7970a415.jpg",
+};
 
-  return (
-    <div className="min-h-screen flex flex-col">
-      <main>
-        {/* Example: lucide-react for icons */}
-        <Loader2 className="animate-spin" />
-        Example Page
-        {/* Example: Streamdown for markdown rendering */}
-        <Streamdown>Any **markdown** content</Streamdown>
-        <Button variant="default">Example Button</Button>
-      </main>
-    </div>
-  );
+type Product = { id: number; name: string; category: string; price: number; cost: number; stock: number; unit: string; status: string; image: string; accent: string };
+type CartItem = Product & { qty: number; selectedUnit: string };
+
+const products: Product[] = [
+  { id: 1, name: "Dâu tây Giống Nhật", category: "Trái cây", price: 185000, cost: 125000, stock: 8.4, unit: "Kg", status: "Tươi mới", image: assets.strawberry, accent: "#FBE7E4" },
+  { id: 2, name: "Cà chua Cherry", category: "Rau củ", price: 89000, cost: 58000, stock: 12.5, unit: "Kg", status: "Tươi mới", image: assets.tomato, accent: "#FFF1E2" },
+  { id: 3, name: "Bắp cải trái tim", category: "Rau củ", price: 42000, cost: 24000, stock: 19, unit: "Kg", status: "Tươi mới", image: assets.cabbage, accent: "#E6F3E9" },
+  { id: 4, name: "Khoai mật nướng", category: "Đồ khô", price: 65000, cost: 38000, stock: 6.8, unit: "Kg", status: "Cần bán gấp", image: assets.potato, accent: "#F7EBDD" },
+  { id: 5, name: "Hồng giòn Đà Lạt", category: "Trái cây", price: 79000, cost: 49000, stock: 15.2, unit: "Kg", status: "Tươi mới", image: assets.strawberry, accent: "#FBE7E4" },
+  { id: 6, name: "Asparagus xanh", category: "Rau củ", price: 125000, cost: 84000, stock: 3.2, unit: "Kg", status: "Cần bán gấp", image: assets.cabbage, accent: "#E6F3E9" },
+  { id: 7, name: "Mứt dâu thủ công", category: "Đồ khô", price: 98000, cost: 62000, stock: 22, unit: "Hộp", status: "Tươi mới", image: assets.strawberry, accent: "#FBE7E4" },
+  { id: 8, name: "Xà lách thủy canh", category: "Rau củ", price: 55000, cost: 32000, stock: 0, unit: "Túi", status: "Hết hàng", image: assets.cabbage, accent: "#E6F3E9" },
+];
+const revenueData = [{ day: "08/8", value: 5.2 }, { day: "09/8", value: 6.8 }, { day: "10/8", value: 5.9 }, { day: "11/8", value: 7.6 }, { day: "12/8", value: 8.4 }, { day: "13/8", value: 9.2 }];
+const categoryData = [{ name: "Trái cây", value: 46, color: "#1E9E68" }, { name: "Rau củ", value: 34, color: "#89C65A" }, { name: "Đồ khô", value: 20, color: "#F0A35A" }];
+const orders = [{ id: "LF-1308-042", time: "10:42", items: "Dâu tây, Cà chua Cherry", total: 368000, method: "Chuyển khoản" }, { id: "LF-1308-041", time: "10:18", items: "Khoai mật, Bắp cải", total: 207000, method: "Tiền mặt" }, { id: "LF-1308-040", time: "09:52", items: "Hồng giòn Đà Lạt", total: 158000, method: "Tiền mặt" }];
+const formatMoney = (n: number) => new Intl.NumberFormat("vi-VN").format(Math.round(n)) + "đ";
+
+function Badge({ children, tone = "green" }: { children: React.ReactNode; tone?: "green" | "orange" | "red" | "slate" }) {
+  const cls = { green: "badge-green", orange: "badge-orange", red: "badge-red", slate: "badge-slate" }[tone];
+  return <span className={`badge ${cls}`}>{children}</span>;
 }
+
+function StatCard({ label, value, detail, icon: Icon, trend, accent }: any) {
+  return <div className={`stat-card ${accent || ""}`}><div className="stat-top"><span className="eyebrow">{label}</span><span className="icon-disc"><Icon size={17} /></span></div><strong>{value}</strong><div className="stat-detail"><span className="trend"><ArrowUpRight size={13} /> {trend}</span> {detail}</div></div>;
+}
+
+export default function Home() {
+  const [active, setActive] = useState("pos");
+  const [category, setCategory] = useState("Tất cả");
+  const [query, setQuery] = useState("");
+  const [cart, setCart] = useState<CartItem[]>([{ ...products[0], qty: 0.5, selectedUnit: "Kg" }, { ...products[1], qty: 1, selectedUnit: "Kg" }]);
+  const [payment, setPayment] = useState("Tiền mặt");
+  const [showBill, setShowBill] = useState(false);
+  const [period, setPeriod] = useState("7 ngày qua");
+  const filtered = useMemo(() => products.filter(p => (category === "Tất cả" || p.category === category) && p.name.toLowerCase().includes(query.toLowerCase())), [category, query]);
+  const total = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+  const addProduct = (p: Product) => { if (!p.stock) return toast.error("Sản phẩm đã hết hàng"); setCart(c => { const found = c.find(x => x.id === p.id); return found ? c.map(x => x.id === p.id ? { ...x, qty: +(x.qty + 0.5).toFixed(2) } : x) : [...c, { ...p, qty: 0.5, selectedUnit: p.unit }]; }); toast.success(`${p.name} đã thêm vào giỏ`); };
+  const changeQty = (id: number, diff: number) => setCart(c => c.map(x => x.id === id ? { ...x, qty: Math.max(0.1, +(x.qty + diff).toFixed(2)) } : x));
+  const removeItem = (id: number) => setCart(c => c.filter(x => x.id !== id));
+  const checkout = () => { setShowBill(true); toast.success("Đơn hàng đã tạo thành công"); };
+
+  const navItems = [
+    { id: "pos", label: "Bán hàng", short: "POS", icon: ShoppingBasket },
+    { id: "products", label: "Kho hàng", short: "Kho", icon: Boxes },
+    { id: "suppliers", label: "Nhập hàng", short: "Nhập", icon: Truck },
+    { id: "dashboard", label: "Báo cáo", short: "Báo cáo", icon: BarChart3 },
+    { id: "settings", label: "Cài đặt", short: "Cài đặt", icon: Settings },
+  ];
+  return <div className="app-shell">
+    <aside className="sidebar"><div className="brand"><img src={assets.logo} /><div><strong>Linh<span>Farm</span></strong><small>Đà Lạt · 01</small></div></div><div className="shop-switch"><Store size={16} /><span>Cửa hàng trung tâm</span><ChevronDown size={15} /></div><nav>{navItems.map(item => <button key={item.id} className={active === item.id ? "nav-active" : ""} onClick={() => setActive(item.id)}><item.icon size={19} /><span>{item.label}</span>{active === item.id && <i />}</button>)}</nav><div className="side-note"><Sparkles size={16} /><div><b>Mùa dâu Đà Lạt</b><span>Doanh thu đang tăng 18%</span></div></div><div className="profile"><div className="avatar">LT</div><div><b>Linh Trần</b><span>Quản lý cửa hàng</span></div><MoreHorizontal size={18} /></div></aside>
+    <main className="main-area"><header className="topbar"><div className="topbar-brand"><img src={assets.logo} /><strong>Linh<span>Farm</span></strong></div><button className="mobile-menu"><Menu size={22} /></button><div><span className="eyebrow">Thứ Tư, 13 tháng 8, 2026</span><h1>{active === "pos" ? "Sáng nay bán gì tươi nhất?" : navItems.find(x => x.id === active)?.label}</h1></div><div className="top-actions"><button className="icon-button"><Bell size={19} /><em /></button><button className="user-chip"><span className="avatar small">LT</span><span>Linh Trần</span><ChevronDown size={15} /></button></div></header>
+      {active === "pos" && <section className="workspace pos-workspace"><div className="products-panel"><div className="section-heading"><div><span className="eyebrow">Bộ sưu tập hôm nay · Đà Lạt</span><h2>Sản phẩm tươi</h2></div><button className="outline-button"><ScanLine size={16} /> Quét mã</button></div><div className="search-row"><div className="search-box"><Search size={17} /><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Tìm sản phẩm..." /></div><button className="filter-button"><Grid2X2 size={17} /></button></div><div className="category-tabs">{["Tất cả", "Trái cây", "Rau củ", "Đồ khô"].map(c => <button className={category === c ? "tab-active" : ""} onClick={() => setCategory(c)} key={c}>{c}</button>)}</div><div className="product-grid">{filtered.map((p, i) => <button className="product-card" key={p.id} onClick={() => addProduct(p)} style={{ animationDelay: `${i * 35}ms` }}><div className="product-img" style={{ background: p.accent }}><img src={p.image} /><span className={`status-dot ${p.status === "Cần bán gấp" ? "orange" : p.status === "Hết hàng" ? "red" : ""}`} aria-label={p.status} /></div><div className="product-meta"><strong>{p.name}</strong><span>{formatMoney(p.price)} / {p.unit}</span><small className={p.stock < 5 ? "low-stock" : ""}>{p.stock ? `Còn ${p.stock} ${p.unit.toLowerCase()}` : "Hết hàng"}</small></div><span className="add-product"><Plus size={17} /></span></button>)}</div></div><aside className="cart-panel"><div className="cart-title"><div><span className="eyebrow">Đơn đang mở · Bàn 01</span><h2>Giỏ hàng <b>{cart.length}</b></h2></div><button className="clear-button" onClick={() => setCart([])}>Xóa tất cả</button></div>{cart.length === 0 ? <div className="empty-cart"><ShoppingCart size={30} /><p>Chưa có sản phẩm</p><span>Chạm vào sản phẩm để thêm vào đơn</span></div> : <div className="cart-list">{cart.map(item => <div className="cart-item" key={item.id}><img src={item.image} /><div className="cart-item-main"><strong>{item.name}</strong><span>{formatMoney(item.price)} / {item.selectedUnit}</span><div className="qty"><button onClick={() => changeQty(item.id, -0.5)}><Minus size={13} /></button><b>{item.qty}</b><button onClick={() => changeQty(item.id, 0.5)}><Plus size={13} /></button><select value={item.selectedUnit} onChange={e => setCart(c => c.map(x => x.id === item.id ? { ...x, selectedUnit: e.target.value } : x))}><option>Kg</option><option>Gram</option><option>Hộp</option><option>Túi</option><option>Khay</option></select></div></div><div className="cart-item-right"><b>{formatMoney(item.price * item.qty)}</b><button onClick={() => removeItem(item.id)}><Trash2 size={15} /></button></div></div>)}</div>}<div className="cart-summary"><div><span>Tạm tính</span><b>{formatMoney(total)}</b></div><div><span>Giảm giá</span><b>0đ</b></div><div className="total-line"><span>Tổng cộng</span><strong>{formatMoney(total)}</strong></div><div className="payment-switch"><button className={payment === "Tiền mặt" ? "selected" : ""} onClick={() => setPayment("Tiền mặt")}><WalletCards size={15} /> Tiền mặt</button><button className={payment === "Chuyển khoản" ? "selected" : ""} onClick={() => setPayment("Chuyển khoản")}><CreditCard size={15} /> Chuyển khoản</button></div>{payment === "Chuyển khoản" && <div className="qr-preview"><div className="qr-box">▦</div><div><b>VietQR · {formatMoney(total)}</b><span>MB Bank · LinhFarm</span></div></div>}<button className="checkout-button" disabled={!cart.length} onClick={checkout}>Tạo đơn & In hóa đơn <Printer size={17} /></button></div></aside></section>}
+      {active === "dashboard" && <Dashboard period={period} setPeriod={setPeriod} />}
+      {active === "products" && <Inventory onAdd={() => toast.success("Mở biểu mẫu thêm sản phẩm")} />}
+      {active === "suppliers" && <Suppliers />}
+      {active === "settings" && <SettingsPage />}
+    </main><div className="bottom-nav">{navItems.map(item => <button key={item.id} className={active === item.id ? "bottom-active" : ""} onClick={() => setActive(item.id)}><item.icon size={19} /><span>{item.short}</span></button>)}</div>
+    {showBill && <BillModal total={total} cart={cart} payment={payment} onClose={() => setShowBill(false)} />}
+  </div>;
+}
+
+function Dashboard({ period, setPeriod }: any) { return <section className="page-section dashboard-page"><div className="section-heading"><div><span className="eyebrow">Tổng quan vận hành</span><h2>Báo cáo doanh thu</h2></div><div className="period-select"><span>Hiển thị:</span><select value={period} onChange={e => setPeriod(e.target.value)}><option>Hôm nay</option><option>7 ngày qua</option><option>Tháng này</option><option>Năm nay</option></select><ChevronDown size={15} /></div></div><div className="stats-grid"><StatCard label="Tổng doanh thu" value="42,8 triệu" detail="so với kỳ trước" trend="18.4%" icon={CircleDollarSign} /><StatCard label="Lợi nhuận ước tính" value="12,6 triệu" detail="biên lợi nhuận 29.4%" trend="8.2%" icon={TrendingUp} accent="mint" /><StatCard label="Đơn hàng thành công" value="186" detail="trong 7 ngày qua" trend="12.8%" icon={ClipboardList} accent="peach" /><StatCard label="Sản phẩm đã bán" value="524.6 kg" detail="từ 32 mặt hàng" trend="6.4%" icon={PackagePlus} accent="lilac" /></div><div className="chart-layout"><div className="chart-card revenue-chart"><div className="chart-card-head"><div><span className="eyebrow">Hiệu suất bán hàng</span><h3>Xu hướng doanh thu</h3></div><span className="chart-total">42.8tr <small>VNĐ</small></span></div><ResponsiveContainer width="100%" height={240}><LineChart data={revenueData} margin={{ left: -20, right: 5, top: 10 }}><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e7ebe3" /><XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: "#8c9a91" }} /><YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: "#8c9a91" }} tickFormatter={v => `${v}tr`} /><Tooltip contentStyle={{ border: "0", borderRadius: 12, boxShadow: "0 12px 30px #19352b18", fontFamily: "Plus Jakarta Sans" }} formatter={(v: any) => [`${v} triệu`, "Doanh thu"]} /><Line type="monotone" dataKey="value" stroke="#1E9E68" strokeWidth={3} dot={{ r: 4, fill: "#1E9E68", stroke: "#fff", strokeWidth: 2 }} activeDot={{ r: 6 }} /></LineChart></ResponsiveContainer></div><div className="chart-card category-chart"><div className="chart-card-head"><div><span className="eyebrow">Cơ cấu bán hàng</span><h3>Theo danh mục</h3></div><button className="icon-button"><MoreHorizontal size={18} /></button></div><div className="donut-wrap"><ResponsiveContainer width="52%" height={160}><PieChart><Pie data={categoryData} innerRadius={50} outerRadius={72} paddingAngle={4} dataKey="value" stroke="none">{categoryData.map(c => <Cell key={c.name} fill={c.color} />)}</Pie></PieChart></ResponsiveContainer><div className="donut-total"><strong>100%</strong><span>doanh thu</span></div></div><div className="legend-list">{categoryData.map(c => <div key={c.name}><span style={{ background: c.color }} />{c.name}<b>{c.value}%</b></div>)}</div></div></div><div className="dashboard-lower"><div className="table-card"><div className="chart-card-head"><div><span className="eyebrow">Theo khối lượng & doanh thu</span><h3>Sản phẩm bán chạy</h3></div><button className="text-button">Xem tất cả <ArrowUpRight size={14} /></button></div><div className="top-products">{[{ name: "Dâu tây Giống Nhật", qty: "48.6 kg", value: "9.0tr", color: "#E65B55" }, { name: "Hồng giòn Đà Lạt", qty: "42.2 kg", value: "3.3tr", color: "#EAA34D" }, { name: "Cà chua Cherry", qty: "38.4 kg", value: "3.4tr", color: "#8AC35B" }, { name: "Khoai mật nướng", qty: "35.8 kg", value: "2.3tr", color: "#B47A49" }, { name: "Bắp cải trái tim", qty: "32.1 kg", value: "1.3tr", color: "#5CA884" }].map((p, i) => <div className="top-product" key={p.name}><span className="rank">0{i + 1}</span><span className="mini-product" style={{ background: p.color }}><Leaf size={15} /></span><div><strong>{p.name}</strong><span>{p.qty}</span></div><b>{p.value}</b></div>)}</div></div><div className="orders-card"><div className="chart-card-head"><div><span className="eyebrow">Mới nhất</span><h3>Đơn gần đây</h3></div><button className="icon-button"><MoreHorizontal size={18} /></button></div>{orders.map(o => <div className="order-row" key={o.id}><div><strong>{o.id}</strong><span>{o.time} · {o.items}</span></div><b>{formatMoney(o.total)}</b></div>)}</div></div></section> }
+
+function Inventory({ onAdd }: any) { return <section className="page-section"><div className="section-heading"><div><span className="eyebrow">Danh mục & tồn kho</span><h2>Kho hàng</h2></div><button className="primary-button" onClick={onAdd}><Plus size={17} /> Thêm sản phẩm</button></div><div className="inventory-summary"><div><b>48</b><span>Tổng mặt hàng</span></div><div><b className="green-text">42</b><span>Đang bán tốt</span></div><div><b className="orange-text">5</b><span>Cần bán gấp</span></div><div><b className="red-text">1</b><span>Hết hàng</span></div></div><div className="inventory-toolbar"><div className="search-box"><Search size={17} /><input placeholder="Tìm trong kho..." /></div><button className="outline-button"><MoreHorizontal size={17} /> Bộ lọc</button></div><div className="inventory-table">{products.map(p => <div className="inventory-row" key={p.id}><img src={p.image} /><div className="inventory-name"><strong>{p.name}</strong><span>{p.category} · Giá nhập {formatMoney(p.cost)}</span></div><div className="stock-cell"><b className={p.stock < 5 ? "orange-text" : p.stock === 0 ? "red-text" : ""}>{p.stock} {p.unit}</b><span>tồn kho</span></div><Badge tone={p.status === "Cần bán gấp" ? "orange" : p.status === "Hết hàng" ? "red" : "green"}>{p.status}</Badge><button className="icon-button"><MoreHorizontal size={18} /></button></div>)}</div></section> }
+function Suppliers() { return <section className="page-section"><div className="section-heading"><div><span className="eyebrow">Nguồn hàng Đà Lạt</span><h2>Nhập hàng</h2></div><button className="primary-button" onClick={() => toast.success("Mở phiếu nhập hàng mới")}><Plus size={17} /> Tạo phiếu nhập</button></div><div className="supplier-hero"><div><span className="eyebrow">Chi phí nhập tháng 8</span><strong>18,4 triệu <small>VNĐ</small></strong><p>12 phiếu nhập · 4 nhà cung cấp</p></div><div className="supplier-sprout"><Leaf size={34} /></div></div><div className="supplier-list"><h3>Nhà cung cấp gần đây</h3>{[{ name: "Nông trại Dâu Nhật Hưng Phát", meta: "Dâu tây · Nhập 12/08", amount: "4.250.000đ", tag: "Đã nhận" }, { name: "HTX Rau sạch Cầu Đất", meta: "Rau củ · Nhập 11/08", amount: "2.860.000đ", tag: "Đã nhận" }, { name: "Vựa đặc sản Minh Tâm", meta: "Đồ khô · Nhập 09/08", amount: "1.680.000đ", tag: "Đã nhận" }].map(s => <div className="supplier-row" key={s.name}><div className="supplier-avatar"><Truck size={18} /></div><div><strong>{s.name}</strong><span>{s.meta}</span></div><div className="supplier-amount"><b>{s.amount}</b><Badge>{s.tag}</Badge></div></div>)}</div></section> }
+function SettingsPage() { return <section className="page-section settings-page"><div className="section-heading"><div><span className="eyebrow">Vận hành cửa hàng</span><h2>Cài đặt</h2></div></div><div className="settings-card shop-profile-card"><div className="big-logo"><img src={assets.logo} /></div><div><h3>LinhFarm · Đà Lạt</h3><p>18 Nguyễn Văn Trỗi, Phường 2, TP. Đà Lạt</p><span>Đang hoạt động · Mở cửa 06:30–20:30</span></div><button className="outline-button">Chỉnh sửa</button></div><div className="settings-list">{[{ icon: FileText, title: "Thông tin hóa đơn", detail: "Logo, địa chỉ, số điện thoại & khổ giấy" }, { icon: CreditCard, title: "Thanh toán & VietQR", detail: "Tài khoản MB Bank · **** 8899" }, { icon: Bell, title: "Thông báo tồn kho", detail: "Cảnh báo khi sản phẩm dưới mức tối thiểu" }, { icon: Settings, title: "Giao diện & thiết bị", detail: "Máy in nhiệt · 80mm · Tiếng Việt" }].map(x => <button className="settings-row" key={x.title}><span className="settings-icon"><x.icon size={18} /></span><span><strong>{x.title}</strong><small>{x.detail}</small></span><ArrowUpRight size={17} /></button>)}</div></section> }
+function BillModal({ total, cart, payment, onClose }: any) { return <div className="modal-overlay"><div className="bill-modal"><div className="modal-head"><div><span className="eyebrow">Đơn hàng đã tạo</span><h2>Hóa đơn xem trước</h2></div><button className="icon-button" onClick={onClose}><X size={19} /></button></div><div className="thermal-bill" id="thermal-bill"><div className="bill-brand"><img src={assets.logo} /><strong>LinhFarm</strong><span>Đặc sản tươi Đà Lạt</span></div><div className="bill-meta">Mã đơn: <b>LF-1308-043</b><br />13/08/2026 · 11:06 · {payment}</div><div className="bill-items">{cart.map((x: CartItem) => <div key={x.id}><span>{x.name}<small>{x.qty} {x.selectedUnit} × {formatMoney(x.price)}</small></span><b>{formatMoney(x.qty * x.price)}</b></div>)}</div><div className="bill-total"><span>TỔNG CỘNG</span><strong>{formatMoney(total)}</strong></div><div className="bill-footer">Cảm ơn bạn đã ủng hộ nông sản Đà Lạt.<br />18 Nguyễn Văn Trỗi · 0263 382 6868</div></div><div className="bill-actions"><button className="outline-button" onClick={() => { navigator.clipboard?.writeText(`LinhFarm - Đơn LF-1308-043\nTổng: ${formatMoney(total)}`); toast.success("Đã copy nội dung bill"); }}><Copy size={16} /> Copy gửi Zalo</button><button className="primary-button" onClick={() => window.print()}><Printer size={16} /> In hóa đơn</button></div></div></div> }
