@@ -41,3 +41,11 @@
 - [x] Thêm padding-bottom khoảng 100px cho danh sách Kho hàng trên mobile.
 - [x] Tăng z-index và kiểm soát overflow để menu không bị che bởi Bottom Navigation.
 - [x] Kiểm thử helper hướng menu, UI contract item cuối, typecheck/build và screenshot responsive.
+
+## Source package export
+
+- [x] Tạo `.env.example` với cấu hình Supabase và storage bucket.
+- [x] Viết README.md hướng dẫn cài đặt, chạy dev, import schema và deploy Vercel.
+- [x] Kiểm tra schema.sql và cấu trúc source trước khi nén.
+- [x] Tạo ZIP sạch, loại bỏ node_modules, dist, logs và file secrets.
+- [x] Kiểm tra nội dung ZIP và gửi file tải xuống.
