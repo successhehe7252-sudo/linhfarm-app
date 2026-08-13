@@ -163,3 +163,34 @@ insert into public.orders (order_code, payment_method, subtotal, total_amount, e
 ('LF-1308-041', 'Tiền mặt', 207000, 207000, 97000, now() - interval '12 hours'),
 ('LF-1308-042', 'Chuyển khoản', 368000, 368000, 120000, now() - interval '2 hours')
 on conflict (order_code) do nothing;
+
+-- Supabase Storage bucket for product images.
+-- Public Read is intentional because products.image_url stores public URLs.
+insert into storage.buckets (id, name, public)
+values ('linhfarm-images', 'linhfarm-images', true)
+on conflict (id) do update set public = true;
+
+drop policy if exists linhfarm_images_public_read on storage.objects;
+create policy linhfarm_images_public_read
+on storage.objects for select
+to anon, authenticated
+using (bucket_id = 'linhfarm-images');
+
+drop policy if exists linhfarm_images_public_upload on storage.objects;
+create policy linhfarm_images_public_upload
+on storage.objects for insert
+to anon, authenticated
+with check (bucket_id = 'linhfarm-images');
+
+drop policy if exists linhfarm_images_public_update on storage.objects;
+create policy linhfarm_images_public_update
+on storage.objects for update
+to anon, authenticated
+using (bucket_id = 'linhfarm-images')
+with check (bucket_id = 'linhfarm-images');
+
+drop policy if exists linhfarm_images_public_delete on storage.objects;
+create policy linhfarm_images_public_delete
+on storage.objects for delete
+to anon, authenticated
+using (bucket_id = 'linhfarm-images');

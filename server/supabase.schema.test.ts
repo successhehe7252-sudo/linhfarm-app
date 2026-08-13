@@ -13,5 +13,8 @@ describe("LinhFarm Supabase schema", () => {
     expect(schema).toContain("alter table public.products enable row level security");
     expect(schema).toContain("on conflict (name) do update");
     expect(schema).toContain("Dâu tây Giống Nhật");
+    expect(schema).toContain("linhfarm-images");
+    expect(schema).toContain("linhfarm_images_public_read");
+    expect(schema).toContain("create policy linhfarm_images_public_upload");
   });
 });

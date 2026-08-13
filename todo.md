@@ -26,3 +26,11 @@
 - [x] Nối CRUD sản phẩm, tạo đơn POS và trừ tồn kho qua Supabase RPC.
 - [x] Nối Dashboard với truy vấn orders thực tế và chạy test/build.
 - [x] Sửa và kiểm chứng cấu trúc schema.sql, sẵn sàng dán/chạy trong Supabase SQL Editor; đã xác nhận unique conflict target, bảng, RLS, RPC và seed data.
+
+## Product image upload
+
+- [x] Thay URL ảnh bằng file picker/drag-drop và preview URL.createObjectURL.
+- [x] Upload ảnh khi lưu vào bucket linhfarm-images và lưu public URL vào products.image_url.
+- [x] Xóa ảnh cũ khi cập nhật ảnh mới và khi xóa sản phẩm.
+- [x] Bổ sung bucket và policy Public Read vào schema.sql.
+- [x] Viết test upload path, upload-on-save helper, cleanup mock; chạy build và screenshot responsive.

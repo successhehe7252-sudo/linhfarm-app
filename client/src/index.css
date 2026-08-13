@@ -46,3 +46,16 @@
 @keyframes popover-in { from { opacity:0; transform:translateY(-5px) scale(.98); } to { opacity:1; transform:none; } }
 @media (max-width:760px) { .topbar { padding:14px 15px 12px; gap:10px; }.topbar-brand { flex:none; }.header-title { min-width:0; }.header-title h1 { font-size:18px; max-width:100%; }.header-title .eyebrow { font-size:8px; white-space:nowrap; }.top-actions { flex:none; gap:8px; }.top-actions .user-chip { display:flex; }.top-actions .user-chip>span:not(.avatar),.top-actions .user-chip>svg { display:none; }.header-popover { position:fixed; top:72px; right:12px; left:12px; width:auto; max-width:none; }.profile-popover { left:auto; width:min(280px,calc(100vw - 24px)); }.signed-out-banner { bottom:82px; white-space:nowrap; } }
 @media (max-width:390px) { .topbar { gap:7px; }.topbar-brand img { width:24px; height:24px; }.header-title h1 { font-size:16px; }.header-title .eyebrow { letter-spacing:.08em; }.top-actions .icon-button { width:32px; height:32px; } }
+
+/* Product image upload: tactile dropzone with immediate preview and mobile-safe hit area. */
+.image-upload-field { display:flex; flex-direction:column; gap:7px; color:#687A70; font-size:10px; font-weight:700; }
+.image-dropzone { position:relative; min-height:92px; display:flex; align-items:center; gap:12px; padding:10px; border:1.5px dashed #B8D9C1; border-radius:12px; background:linear-gradient(135deg,#F6FBF5,#FFFFFF); cursor:pointer; transition:background .16s ease,border-color .16s ease,transform .16s ease; }
+.image-dropzone:hover { border-color:var(--green); background:#F0F9F1; }
+.image-dropzone:active { transform:scale(.99); }
+.image-dropzone input { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
+.image-dropzone img { width:70px; height:70px; flex:none; object-fit:cover; border-radius:9px; background:#EAF3E9; border:1px solid #E1ECE1; }
+.image-dropzone div { min-width:0; flex:1; display:flex; flex-direction:column; gap:5px; }
+.image-dropzone strong { color:#4C6457; font-size:10px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.image-dropzone small { color:#9AA9A0; font-size:8px; font-weight:500; }
+.upload-browse { flex:none; border-radius:7px; background:#E5F5E9; color:var(--green); padding:8px 9px; font-size:9px; font-weight:800; }
+@media (max-width:760px) { .image-dropzone { min-height:86px; gap:9px; }.image-dropzone img { width:60px; height:60px; }.upload-browse { padding:7px; } }
