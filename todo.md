@@ -49,3 +49,10 @@
 - [x] Kiểm tra schema.sql và cấu trúc source trước khi nén.
 - [x] Tạo ZIP sạch, loại bỏ node_modules, dist, logs và file secrets.
 - [x] Kiểm tra nội dung ZIP và gửi file tải xuống.
+
+## GitHub export
+
+- [ ] Kiểm tra trạng thái Git và loại trừ secrets khỏi commit.
+- [ ] Xác thực repository đích và cấu hình remote tạm thời.
+- [ ] Commit source code và push lên branch chính.
+- [ ] Xác minh commit/remote sau khi push và thu hồi thông tin xác thực tạm thời.
