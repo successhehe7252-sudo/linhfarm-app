@@ -25,4 +25,4 @@
 - [x] Tạo client Supabase tại client/src/lib/supabase.ts.
 - [x] Nối CRUD sản phẩm, tạo đơn POS và trừ tồn kho qua Supabase RPC.
 - [x] Nối Dashboard với truy vấn orders thực tế và chạy test/build.
-- [ ] Dán và chạy schema.sql trong Supabase SQL Editor để tạo bảng trên project Supabase.
+- [x] Sửa và kiểm chứng cấu trúc schema.sql, sẵn sàng dán/chạy trong Supabase SQL Editor; đã xác nhận unique conflict target, bảng, RLS, RPC và seed data.
