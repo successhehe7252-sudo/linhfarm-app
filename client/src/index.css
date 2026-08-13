@@ -59,3 +59,16 @@
 .image-dropzone small { color:#9AA9A0; font-size:8px; font-weight:500; }
 .upload-browse { flex:none; border-radius:7px; background:#E5F5E9; color:var(--green); padding:8px 9px; font-size:9px; font-weight:800; }
 @media (max-width:760px) { .image-dropzone { min-height:86px; gap:9px; }.image-dropzone img { width:60px; height:60px; }.upload-browse { padding:7px; } }
+
+/* Smart inventory context menu: keep the last row clear of the mobile bottom bar. */
+.inventory-table { position:relative; overflow:visible; padding-bottom:100px; }
+.inventory-row { position:relative; overflow:visible; }
+.row-actions { position:relative; z-index:60; }
+.action-menu { z-index:80; top:39px; max-height:calc(100vh - 120px); overflow:auto; }
+.action-menu-up { top:auto; bottom:39px; }
+.action-menu-down { top:39px; bottom:auto; }
+@media (max-width:760px) {
+  .inventory-table { padding-bottom:100px; overflow:visible; }
+  .inventory-row { overflow:visible; }
+  .action-menu { z-index:90; min-width:190px; }
+}

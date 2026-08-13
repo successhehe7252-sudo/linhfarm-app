@@ -34,3 +34,10 @@
 - [x] Xóa ảnh cũ khi cập nhật ảnh mới và khi xóa sản phẩm.
 - [x] Bổ sung bucket và policy Public Read vào schema.sql.
 - [x] Viết test upload path, upload-on-save helper, cleanup mock; chạy build và screenshot responsive.
+
+## Product context menu positioning
+
+- [x] Tự động mở menu 3 chấm lên trên khi gần đáy viewport.
+- [x] Thêm padding-bottom khoảng 100px cho danh sách Kho hàng trên mobile.
+- [x] Tăng z-index và kiểm soát overflow để menu không bị che bởi Bottom Navigation.
+- [x] Kiểm thử helper hướng menu, UI contract item cuối, typecheck/build và screenshot responsive.
