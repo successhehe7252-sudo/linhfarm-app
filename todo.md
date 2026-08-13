@@ -16,3 +16,13 @@
 - [x] Thêm state mở/đóng menu Avatar, vai trò và đăng xuất.
 - [x] Đồng bộ tiêu đề Header theo POS, Kho, Nhập, Báo cáo, Cài đặt.
 - [x] Chạy typecheck, build và screenshot responsive.
+
+## Supabase integration
+
+- [x] Nâng cấp dự án lên full-stack và cài @supabase/supabase-js.
+- [x] Cấu hình NEXT_PUBLIC_SUPABASE_URL và NEXT_PUBLIC_SUPABASE_ANON_KEY, kèm test endpoint.
+- [x] Tạo schema.sql với products, orders, order_items, purchase_orders, purchase_order_items, store_settings và dữ liệu mẫu.
+- [x] Tạo client Supabase tại client/src/lib/supabase.ts.
+- [x] Nối CRUD sản phẩm, tạo đơn POS và trừ tồn kho qua Supabase RPC.
+- [x] Nối Dashboard với truy vấn orders thực tế và chạy test/build.
+- [ ] Dán và chạy schema.sql trong Supabase SQL Editor để tạo bảng trên project Supabase.
