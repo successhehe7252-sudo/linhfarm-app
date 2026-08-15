@@ -56,9 +56,12 @@ export function ManusDialog({
           {logo ? (
             <div className="w-16 h-16 bg-white rounded-xl border border-[rgba(0,0,0,0.08)] flex items-center justify-center">
               <img
-                src={logo}
+                src={logo || "/logo.webp"}
                 alt="Dialog graphic"
                 className="w-10 h-10 rounded-md"
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).src = "/logo.webp";
+                }}
               />
             </div>
           ) : null}
