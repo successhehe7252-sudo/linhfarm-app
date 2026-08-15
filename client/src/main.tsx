@@ -7,6 +7,9 @@ import superjson from "superjson";
 import App from "./App";
 import { startLogin } from "./const";
 import "./index.css";
+import { registerServiceWorker } from "./registerServiceWorker";
+
+registerServiceWorker();
 
 const queryClient = new QueryClient();
 
