@@ -401,7 +401,7 @@ export default function Home() {
             loaded.accountName = parsed.account_name;
           }
         }
-      } catch {}
+      } catch { }
       setStoreInfo(loaded);
     });
     return () => { cancelled = true; };
@@ -646,7 +646,7 @@ export default function Home() {
                 type="button"
                 onClick={() => setViewMode(v => {
                   const next = v === "grid" ? "list" : "grid";
-                  try { localStorage.setItem("linhfarm_pos_view_mode", next); } catch (_) {}
+                  try { localStorage.setItem("linhfarm_pos_view_mode", next); } catch (_) { }
                   return next;
                 })}
                 className="w-11 h-11 aspect-square rounded-xl bg-white border border-emerald-100 shadow-sm flex items-center justify-center text-slate-600 hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 active:scale-95 transition-all duration-200 shrink-0 cursor-pointer"
@@ -724,10 +724,10 @@ export default function Home() {
               </div>
             )}
           </div>
-          <aside className="cart-panel w-full xl:w-[400px] flex flex-col bg-white rounded-3xl p-4 shadow-sm border border-slate-100 flex-shrink-0">
+          <aside className="cart-panel w-full xl:w-[400px] flex flex-col gap-3 bg-white rounded-3xl p-4 md:p-5 shadow-sm border border-slate-100 flex-shrink-0 mb-2 xl:mb-0">
             <div className="cart-title">
               <div>
-                <span className="eyebrow">Đơn đang mở · Bàn 01</span>
+                <span className="eyebrow">Đơn đang mở ·</span>
                 <h2>Giỏ hàng <b>{cart.length}</b></h2>
               </div>
               <button className="clear-button" onClick={() => setCart([])}>Xóa tất cả</button>
@@ -989,8 +989,8 @@ function Dashboard({ period, setPeriod }: { period: string; setPeriod: (p: strin
             totalProfit < 0
               ? `-${formatMoney(Math.abs(totalProfit))}`
               : totalProfit >= 1000000
-              ? `${(totalProfit / 1000000).toFixed(1).replace(".", ",")} triệu`
-              : formatMoney(totalProfit)
+                ? `${(totalProfit / 1000000).toFixed(1).replace(".", ",")} triệu`
+                : formatMoney(totalProfit)
           }
           isNegative={totalProfit < 0}
           detail={`Tỷ suất lợi nhuận: ${marginPercent}%`}
@@ -1212,15 +1212,15 @@ function Inventory({
             const isOpen = activeMenuId === p.id;
 
             return (
-              <div 
-                key={p.id} 
+              <div
+                key={p.id}
                 className="w-full bg-white rounded-2xl p-4 shadow-sm border border-slate-100 flex items-center justify-between gap-4 hover:border-emerald-200 transition-all box-border"
               >
                 {/* Cột Trái: Ảnh + Tên sản phẩm + Thông tin chi tiết */}
                 <div className="flex items-center gap-3 min-w-0 flex-1">
-                  <img 
-                    src={p.image || "/logo.webp"} 
-                    alt={p.name} 
+                  <img
+                    src={p.image || "/logo.webp"}
+                    alt={p.name}
                     className="w-12 h-12 rounded-xl object-cover border border-slate-100 flex-shrink-0 bg-slate-50"
                     onError={e => { e.currentTarget.src = "/logo.webp"; }}
                   />
@@ -1259,7 +1259,7 @@ function Inventory({
                       onOpenChange={open => setActiveMenuId(open ? p.id : null)}
                     >
                       <DropdownMenuTrigger asChild>
-                        <button 
+                        <button
                           type="button"
                           className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
                           aria-label={`Mở menu ${p.name}`}
@@ -1385,7 +1385,7 @@ function Suppliers({ products, suppliers, purchaseOrders, onAdd, onAddSupplier }
 
   return (
     <div className="w-full flex-1 p-4 md:p-6 lg:p-8 space-y-6 pb-28 lg:pb-12">
-      
+
       <div className="supplier-hero mb-6 flex justify-between items-center">
         <div>
           <span className="eyebrow">Chi phí nhập kho</span>
@@ -1793,7 +1793,7 @@ function BillModal({ total, cart, payment, orderCode, storeInfo, cashier, onClos
           return;
         } catch (clipboardErr: any) {
           console.warn("Direct clipboard write failed, attempting fallback:", clipboardErr);
-          
+
           const blob = await generateReceiptBlob(billRef.current);
 
           const file = new File([blob], `hoa-don-${displayCode}.png`, { type: "image/png" });
@@ -1952,20 +1952,18 @@ function ProfileMenu({ user, onLogout }: { user: any; onLogout: () => void }) {
         <span className="profile-label text-[10px] uppercase font-bold text-slate-400">
           Vai trò hiện tại
         </span>
-        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-          isOwner ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-slate-100 text-slate-600 border-slate-200"
-        }`}>
+        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${isOwner ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-slate-100 text-slate-600 border-slate-200"
+          }`}>
           {roleLabel}
         </span>
       </div>
 
       <div className="role-options space-y-1">
         <div
-          className={`w-full p-2.5 rounded-xl flex items-center justify-between text-xs transition-all ${
-            isOwner
-              ? "bg-emerald-50/90 border border-emerald-200/80 text-emerald-900 font-bold"
-              : "opacity-50 bg-slate-50 border border-slate-100 text-slate-400 cursor-not-allowed"
-          }`}
+          className={`w-full p-2.5 rounded-xl flex items-center justify-between text-xs transition-all ${isOwner
+            ? "bg-emerald-50/90 border border-emerald-200/80 text-emerald-900 font-bold"
+            : "opacity-50 bg-slate-50 border border-slate-100 text-slate-400 cursor-not-allowed"
+            }`}
         >
           <div className="flex items-center gap-2.5 min-w-0">
             <Store size={16} className={isOwner ? "text-emerald-700" : "text-slate-400"} />
@@ -1982,11 +1980,10 @@ function ProfileMenu({ user, onLogout }: { user: any; onLogout: () => void }) {
         </div>
 
         <div
-          className={`w-full p-2.5 rounded-xl flex items-center justify-between text-xs transition-all ${
-            isStaff
-              ? "bg-emerald-50/90 border border-emerald-200/80 text-emerald-900 font-bold"
-              : "opacity-50 bg-slate-50 border border-slate-100 text-slate-400 cursor-not-allowed"
-          }`}
+          className={`w-full p-2.5 rounded-xl flex items-center justify-between text-xs transition-all ${isStaff
+            ? "bg-emerald-50/90 border border-emerald-200/80 text-emerald-900 font-bold"
+            : "opacity-50 bg-slate-50 border border-slate-100 text-slate-400 cursor-not-allowed"
+            }`}
         >
           <div className="flex items-center gap-2.5 min-w-0">
             <ShoppingBasket size={16} className={isStaff ? "text-emerald-700" : "text-slate-400"} />
