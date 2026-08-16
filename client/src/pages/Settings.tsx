@@ -346,7 +346,7 @@ export function SettingsPage({
   ];
 
   return (
-    <section className="page-section settings-page">
+    <div className="w-full flex-1 p-4 md:p-6 lg:p-8 space-y-6 pb-28 lg:pb-12">
       <div className="settings-card shop-profile-card">
         <div className="big-logo">
           <img src="/logo.webp" alt="LinhFarm Logo" onError={e => { e.currentTarget.src = "/logo.webp"; }} />
@@ -371,6 +371,6 @@ export function SettingsPage({
           </button>
         ))}
       </div>
-    </section>
+    </div>
   );
 }

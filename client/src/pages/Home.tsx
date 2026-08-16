@@ -82,8 +82,28 @@ function Badge({ children, tone = "green" }: { children: React.ReactNode; tone?:
   return <span className={`badge ${cls}`}>{children}</span>;
 }
 
-function StatCard({ label, value, detail, icon: Icon, trend, accent }: any) {
-  return <div className={`stat-card ${accent || ""}`}><div className="stat-top"><span className="eyebrow">{label}</span><span className="icon-disc"><Icon size={17} /></span></div><strong>{value}</strong><div className="stat-detail"><span className="trend"><ArrowUpRight size={13} /> {trend}</span> {detail}</div></div>;
+function StatCard({ label, value, detail, icon: Icon, trend, accent, isNegative }: any) {
+  return (
+    <div className={`stat-card w-full bg-white rounded-2xl p-3 md:p-4 border border-slate-100 shadow-sm flex flex-col justify-between min-w-0 box-border overflow-hidden ${accent || ""}`}>
+      <div className="stat-top flex items-center justify-between gap-1 mb-1">
+        <span className="eyebrow text-[10px] md:text-xs font-semibold text-slate-500 uppercase tracking-wider truncate">{label}</span>
+        <span className="icon-disc w-6 h-6 md:w-8 md:h-8 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 text-xs">
+          <Icon size={14} className="md:w-4 md:h-4" />
+        </span>
+      </div>
+      <strong className={`block text-base md:text-2xl font-bold font-sans tracking-tight tabular-nums truncate my-1 ${isNegative ? "text-amber-600 font-mono" : "text-slate-800 font-mono"}`} title={String(value)}>
+        {value}
+      </strong>
+      <div className="stat-detail flex flex-wrap items-center gap-1.5 mt-0.5 text-[10px] md:text-[11px] text-slate-400 min-w-0">
+        {trend && (
+          <span className={`trend inline-flex items-center gap-0.5 font-bold shrink-0 text-[10px] ${isNegative ? "text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-md" : "text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-md"}`}>
+            <ArrowUpRight size={12} /> {trend}
+          </span>
+        )}
+        <span className="truncate leading-tight text-[10px] md:text-[11px] text-slate-500 font-medium" title={detail}>{detail}</span>
+      </div>
+    </div>
+  );
 }
 
 
@@ -605,11 +625,11 @@ export default function Home() {
     { id: "dashboard", label: "Báo cáo", short: "Báo cáo", icon: BarChart3 },
     { id: "settings", label: "Cài đặt", short: "Cài đặt", icon: Settings },
   ];
-  return <div className="app-shell flex h-screen w-screen overflow-hidden bg-slate-50">
+  return <div className="app-shell flex h-screen w-screen overflow-hidden bg-[#FBFBFA]">
     <SidebarNavigation activeTab={active} onTabChange={handleTabChange} />
-    <main className="main-area flex-1 min-w-0 flex flex-col h-full overflow-hidden relative"><header className="topbar w-full max-w-full flex items-center justify-between p-3 md:p-4 bg-white/60 border-b border-slate-100 flex-shrink-0 gap-3"><div className="flex items-center gap-2 lg:hidden shrink-0"><img src={assets.logo} alt="LinhFarm" className="w-8 h-8 rounded-full object-cover border border-slate-200/80 shadow-xs" onError={e => { e.currentTarget.src = "/logo.webp"; }} /><span className="font-bold text-slate-800 text-sm">LinhFarm</span></div><div className="header-title min-w-0 flex-1"><span className="eyebrow text-[11px] md:text-xs text-emerald-700 font-medium flex items-center gap-1">🍃 THỨ TƯ, 13 THÁNG 8, 2026</span><h1 className="text-base md:text-lg lg:text-xl font-bold text-slate-800 truncate mt-0.5">{active === "pos" ? "Sáng nay bán gì tươi nhất?" : NAV_ITEMS.find(x => x.id === active)?.label}</h1></div><div className="top-actions flex items-center gap-2 flex-shrink-0"><div className="header-popover-wrap relative"><button type="button" className={`w-9 h-9 rounded-full bg-white border border-slate-200 shadow-sm flex items-center justify-center text-slate-600 hover:bg-slate-50 transition-colors relative cursor-pointer ${headerPanel === "notifications" ? "ring-2 ring-emerald-500/20 border-emerald-500" : ""}`} aria-label="Thông báo cửa hàng" onClick={() => setHeaderPanel(headerPanel === "notifications" ? null : "notifications")}><Bell size={18} /><span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white" /></button>{headerPanel === "notifications" && <NotificationPopover onClose={() => setHeaderPanel(null)} />}</div><div className="header-popover-wrap relative"><button type="button" className={`flex items-center gap-2 cursor-pointer p-0.5 pr-2 rounded-full hover:bg-slate-100/80 transition-all ${headerPanel === "profile" ? "bg-slate-100" : ""}`} onClick={() => setHeaderPanel(headerPanel === "profile" ? null : "profile")}><span className="w-9 h-9 rounded-full bg-emerald-700 text-white font-semibold text-xs flex items-center justify-center shadow-sm flex-shrink-0">{userInitials}</span><span className="hidden xl:inline text-xs font-semibold text-slate-700">{fullName}</span><ChevronDown size={14} className="text-slate-400" /></button>{headerPanel === "profile" && <ProfileMenu user={user} onLogout={async () => { setHeaderPanel(null); await signOut(); }} />}</div></div></header>
+    <main className="main-area flex-1 h-full min-w-0 overflow-y-auto overflow-x-hidden relative flex flex-col"><header className="topbar w-full max-w-full flex items-center justify-between p-3 md:p-4 bg-white/60 border-b border-slate-100 flex-shrink-0 gap-3"><div className="flex items-center gap-2 lg:hidden shrink-0"><img src={assets.logo} alt="LinhFarm" className="w-8 h-8 rounded-full object-cover border border-slate-200/80 shadow-xs" onError={e => { e.currentTarget.src = "/logo.webp"; }} /><span className="font-bold text-slate-800 text-sm">LinhFarm</span></div><div className="header-title min-w-0 flex-1"><span className="eyebrow text-[11px] md:text-xs text-emerald-700 font-medium flex items-center gap-1">🍃 THỨ TƯ, 13 THÁNG 8, 2026</span><h1 className="text-base md:text-lg lg:text-xl font-bold text-slate-800 truncate mt-0.5">{active === "pos" ? "Sáng nay bán gì tươi nhất?" : NAV_ITEMS.find(x => x.id === active)?.label}</h1></div><div className="top-actions flex items-center gap-2 flex-shrink-0"><div className="header-popover-wrap relative"><button type="button" className={`w-9 h-9 rounded-full bg-white border border-slate-200 shadow-sm flex items-center justify-center text-slate-600 hover:bg-slate-50 transition-colors relative cursor-pointer ${headerPanel === "notifications" ? "ring-2 ring-emerald-500/20 border-emerald-500" : ""}`} aria-label="Thông báo cửa hàng" onClick={() => setHeaderPanel(headerPanel === "notifications" ? null : "notifications")}><Bell size={18} /><span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white" /></button>{headerPanel === "notifications" && <NotificationPopover onClose={() => setHeaderPanel(null)} />}</div><div className="header-popover-wrap relative"><button type="button" className={`flex items-center gap-2 cursor-pointer p-0.5 pr-2 rounded-full hover:bg-slate-100/80 transition-all ${headerPanel === "profile" ? "bg-slate-100" : ""}`} onClick={() => setHeaderPanel(headerPanel === "profile" ? null : "profile")}><span className="w-9 h-9 rounded-full bg-emerald-700 text-white font-semibold text-xs flex items-center justify-center shadow-sm flex-shrink-0">{userInitials}</span><span className="hidden xl:inline text-xs font-semibold text-slate-700">{fullName}</span><ChevronDown size={14} className="text-slate-400" /></button>{headerPanel === "profile" && <ProfileMenu user={user} onLogout={async () => { setHeaderPanel(null); await signOut(); }} />}</div></div></header>
       {active === "pos" && (
-        <section className="workspace pos-workspace flex flex-col lg:flex-row gap-4 p-3 md:p-4 w-full min-h-screen lg:h-[calc(100vh-70px)] overflow-y-auto lg:overflow-hidden pb-28 lg:pb-4 flex-1">
+        <div className="workspace pos-workspace flex flex-col lg:flex-row gap-4 p-3 md:p-4 w-full flex-1 pb-28 lg:pb-6">
           <div className="products-panel w-full lg:flex-1 flex flex-col gap-3 min-w-0">
             <div className="search-row flex items-center gap-2.5 mb-1 shrink-0">
               <button className="outline-button h-11 text-xs shrink-0"><ScanLine size={16} /> Quét mã</button>
@@ -637,7 +657,7 @@ export default function Home() {
               </button>
             </div>
             <div className="category-tabs flex items-center gap-2 overflow-x-auto no-scrollbar whitespace-nowrap py-1 max-w-full shrink-0 mb-1">
-              {["Tất cả", "Trái cây", "Rau củ", "Đồ khô", "Giỏ quà"].map(c => (
+              {["Tất cả", "Trái cây", "Rau củ", "Đồ khô"].map(c => (
                 <button className={category === c ? "tab-active" : ""} onClick={() => setCategory(c)} key={c}>{c}</button>
               ))}
             </div>
@@ -761,7 +781,7 @@ export default function Home() {
               <button className="checkout-button" disabled={!cart.length} onClick={handleCheckoutClick}>Tạo đơn & In hóa đơn <Printer size={17} /></button>
             </div>
           </aside>
-        </section>
+        </div>
       )}
       {active === "dashboard" && <Dashboard period={period} setPeriod={setPeriod} />}
       {active === "products" && <Inventory products={products} latestImportDates={latestImportDates} onAdd={() => setProductModal({ mode: "add" })} onEdit={product => setProductModal({ mode: "edit", product })} onDelete={removeProduct} onMenu={setProductMenu} productMenu={productMenu} />}
@@ -937,11 +957,11 @@ function Dashboard({ period, setPeriod }: { period: string; setPeriod: (p: strin
   }, [filteredOrders]);
 
   return (
-    <section className="page-section dashboard-page">
+    <div className="w-full max-w-full flex-1 overflow-x-hidden p-3 md:p-6 lg:p-8 space-y-6 pb-28 lg:pb-12">
       <div className="section-heading">
         <div>
-          <span className="eyebrow">Tổng quan vận hành · Supabase</span>
-          <h2>Báo cáo doanh thu</h2>
+          <span className="eyebrow text-[10px] md:text-xs font-semibold text-emerald-600 uppercase tracking-wider">Tổng quan vận hành · Supabase</span>
+          <h2 className="text-xl md:text-2xl font-sans font-bold text-slate-800 tracking-tight mt-0.5">Báo cáo doanh thu</h2>
         </div>
         <div className="period-select">
           <span>Hiển thị:</span>
@@ -955,7 +975,7 @@ function Dashboard({ period, setPeriod }: { period: string; setPeriod: (p: strin
         </div>
       </div>
 
-      <div className="stats-grid">
+      <div className="stats-grid grid grid-cols-2 md:grid-cols-4 gap-2.5 md:gap-4 w-full max-w-full">
         <StatCard
           label="Tổng doanh thu"
           value={totalRevenue >= 1000000 ? `${(totalRevenue / 1000000).toFixed(1).replace(".", ",")} triệu` : formatMoney(totalRevenue)}
@@ -965,7 +985,14 @@ function Dashboard({ period, setPeriod }: { period: string; setPeriod: (p: strin
         />
         <StatCard
           label="Lợi nhuận gộp"
-          value={totalProfit >= 1000000 ? `${(totalProfit / 1000000).toFixed(1).replace(".", ",")} triệu` : formatMoney(totalProfit)}
+          value={
+            totalProfit < 0
+              ? `-${formatMoney(Math.abs(totalProfit))}`
+              : totalProfit >= 1000000
+              ? `${(totalProfit / 1000000).toFixed(1).replace(".", ",")} triệu`
+              : formatMoney(totalProfit)
+          }
+          isNegative={totalProfit < 0}
           detail={`Tỷ suất lợi nhuận: ${marginPercent}%`}
           trend={`${marginPercent}%`}
           icon={TrendingUp}
@@ -994,9 +1021,9 @@ function Dashboard({ period, setPeriod }: { period: string; setPeriod: (p: strin
           <div className="chart-card-head">
             <div>
               <span className="eyebrow">Hiệu suất bán hàng</span>
-              <h3>Xu hướng doanh thu (${period})</h3>
+              <h3 className="text-sm md:text-base font-sans font-bold text-slate-800">Xu hướng doanh thu ({period})</h3>
             </div>
-            <span className="chart-total">{(totalRevenue / 1000000).toFixed(1)}tr <small>VNĐ</small></span>
+            <span className="chart-total font-mono font-bold">{(totalRevenue / 1000000).toFixed(1)}tr <small>VNĐ</small></span>
           </div>
           <ResponsiveContainer width="100%" height={240}>
             <LineChart data={revenuePoints} margin={{ left: -20, right: 5, top: 10 }}>
@@ -1013,19 +1040,24 @@ function Dashboard({ period, setPeriod }: { period: string; setPeriod: (p: strin
           <div className="chart-card-head">
             <div>
               <span className="eyebrow">Cơ cấu bán hàng</span>
-              <h3>Theo danh mục</h3>
+              <h3 className="text-sm md:text-base font-sans font-bold text-slate-800">Theo danh mục</h3>
             </div>
             <button className="icon-button"><MoreHorizontal size={18} /></button>
           </div>
-          <div className="donut-wrap">
-            <ResponsiveContainer width="52%" height={160}>
-              <PieChart>
-                <Pie data={categoryData} innerRadius={50} outerRadius={72} paddingAngle={4} dataKey="value" stroke="none">
-                  {categoryData.map(c => <Cell key={c.name} fill={c.color} />)}
-                </Pie>
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="donut-total"><strong>100%</strong><span>doanh thu</span></div>
+          <div className="relative flex items-center justify-center w-full my-2">
+            <div className="w-[180px] h-[180px] flex items-center justify-center">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={categoryData} innerRadius={58} outerRadius={78} paddingAngle={4} dataKey="value" stroke="none">
+                    {categoryData.map(c => <Cell key={c.name} fill={c.color} />)}
+                  </Pie>
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center">
+              <span className="text-xl font-bold font-mono tabular-nums text-slate-800 leading-none">100%</span>
+              <span className="text-[11px] font-medium text-slate-400 mt-1">Doanh thu</span>
+            </div>
           </div>
           <div className="legend-list">
             {categoryData.map(c => <div key={c.name}><span style={{ background: c.color }} />{c.name}<b>{c.value}%</b></div>)}
@@ -1094,7 +1126,7 @@ function Dashboard({ period, setPeriod }: { period: string; setPeriod: (p: strin
           </div>
         </div>
       </div>
-    </section>
+    </div>
   );
 }
 
@@ -1134,7 +1166,7 @@ function Inventory({
   }, [products, category, query]);
 
   return (
-    <section className="page-section min-h-screen w-full max-w-full px-4 md:px-6 bg-[#F7F8F2] flex flex-col justify-between pb-28 md:pb-8 box-border">
+    <div className="w-full flex-1 p-4 md:p-6 lg:p-8 space-y-6 pb-28 lg:pb-12">
       <div className="inventory-summary">
         <div><b>{products.length}</b><span>Tổng mặt hàng</span></div>
         <div><b className="green-text">{products.filter(p => p.status === "Tươi mới").length}</b><span>Đang bán tốt</span></div>
@@ -1153,7 +1185,7 @@ function Inventory({
           </button>
         </div>
         <div className="category-tabs inventory-filters flex items-center gap-2 overflow-x-auto no-scrollbar whitespace-nowrap py-1 shrink-0">
-          {["Tất cả", "Trái cây", "Rau củ", "Đồ khô", "Giỏ quà"].map(c => (
+          {["Tất cả", "Trái cây", "Rau củ", "Đồ khô"].map(c => (
             <button className={category === c ? "tab-active" : ""} onClick={() => setCategory(c)} key={c}>
               {c}
             </button>
@@ -1270,7 +1302,7 @@ function Inventory({
           })}
         </div>
       )}
-    </section>
+    </div>
   );
 }
 
@@ -1300,8 +1332,7 @@ function ProductModal({ mode, product, onClose, onSave }: { mode: "add" | "edit"
               options={[
                 { value: "Trái cây", label: "Trái cây" },
                 { value: "Rau củ", label: "Rau củ" },
-                { value: "Đồ khô", label: "Đồ khô" },
-                { value: "Giỏ quà", label: "Giỏ quà" }
+                { value: "Đồ khô", label: "Đồ khô" }
               ]}
             />
           </label>
@@ -1317,11 +1348,12 @@ function ProductModal({ mode, product, onClose, onSave }: { mode: "add" | "edit"
               onValueChange={val => update("unit", val)}
               options={[
                 { value: "Kg", label: "Kg" },
-                { value: "Gram", label: "Gram" },
                 { value: "Hộp", label: "Hộp" },
                 { value: "Túi", label: "Túi" },
-                { value: "Khay", label: "Khay" },
-                { value: "Giỏ", label: "Giỏ" }
+                { value: "Bó", label: "Bó" },
+                { value: "Chai", label: "Chai" },
+                { value: "Gói", label: "Gói" },
+                { value: "Quả", label: "Quả" }
               ]}
             />
           </label>
@@ -1352,7 +1384,7 @@ function Suppliers({ products, suppliers, purchaseOrders, onAdd, onAddSupplier }
   const totalCostText = totalCost > 0 ? (totalCost / 1000000).toFixed(1).replace(".", ",") + " triệu" : "0đ";
 
   return (
-    <section className="page-section">
+    <div className="w-full flex-1 p-4 md:p-6 lg:p-8 space-y-6 pb-28 lg:pb-12">
       
       <div className="supplier-hero mb-6 flex justify-between items-center">
         <div>
@@ -1407,7 +1439,7 @@ function Suppliers({ products, suppliers, purchaseOrders, onAdd, onAddSupplier }
           )}
         </div>
       </div>
-    </section>
+    </div>
   );
 }
 

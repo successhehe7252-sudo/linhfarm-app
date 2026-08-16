@@ -1,6 +1,7 @@
+
 import { createClient } from "@supabase/supabase-js";
 
-const env = (import.meta as ImportMeta & { env: Record<string, string | undefined> }).env;
+const env = (typeof import.meta !== "undefined" && (import.meta as any).env) ? (import.meta as any).env : {};
 const supabaseUrl = env.NEXT_PUBLIC_SUPABASE_URL ?? (typeof process !== "undefined" ? process.env.NEXT_PUBLIC_SUPABASE_URL : undefined);
 const supabaseAnonKey = env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? (typeof process !== "undefined" ? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY : undefined);
 

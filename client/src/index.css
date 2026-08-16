@@ -391,14 +391,14 @@ img {
 
 .section-heading h2 {
   margin: 6px 0 0;
-  font: 600 26px Fraunces, serif;
+  font: 700 24px 'Plus Jakarta Sans', sans-serif;
   letter-spacing: -.6px;
 }
 
 .section-heading h3,
 .chart-card h3 {
   margin: 5px 0 0;
-  font: 600 16px Fraunces, serif;
+  font: 700 16px 'Plus Jakarta Sans', sans-serif;
 }
 
 .outline-button,
@@ -897,8 +897,9 @@ img {
 
 .stat-card>strong {
   display: block;
-  font: 600 25px Fraunces, serif;
-  margin: 14px 0 6px;
+  font: 700 22px 'Plus Jakarta Sans', sans-serif;
+  font-variant-numeric: tabular-nums;
+  margin: 10px 0 4px;
 }
 
 .stat-detail {
@@ -939,7 +940,8 @@ img {
 
 .chart-total {
   color: var(--green);
-  font: 600 19px Fraunces, serif;
+  font: 700 18px 'Plus Jakarta Sans', sans-serif;
+  font-variant-numeric: tabular-nums;
 }
 
 .chart-total small {
@@ -949,27 +951,33 @@ img {
 
 .donut-wrap {
   position: relative;
-  height: 158px;
+  min-height: 180px;
   display: flex;
   justify-content: center;
+  align-items: center;
+  margin: 8px 0;
 }
 
 .donut-total {
   position: absolute;
-  top: 54px;
-  left: 28%;
+  inset: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  text-align: center;
 }
 
 .donut-total strong {
-  font: 600 18px Fraunces, serif;
+  font: 700 20px 'Plus Jakarta Sans', sans-serif;
+  font-variant-numeric: tabular-nums;
 }
 
 .donut-total span {
   color: #99A69E;
-  font-size: 9px;
+  font-size: 10px;
+  font-weight: 500;
 }
 
 .legend-list {
