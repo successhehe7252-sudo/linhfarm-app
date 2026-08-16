@@ -8,6 +8,7 @@ import { toBlob, toPng } from "html-to-image";
 import { toast } from "sonner";
 import { OrderHistoryModal } from "@/components/OrderHistoryModal";
 import { buildVietQrUrl } from "@/lib/vietqr";
+import { SettingsPage, SettingsModal, type StoreSettingsData } from "./Settings";
 import { cancelOrder, createOrder, createPurchaseOrder, deleteProduct as deleteSupabaseProduct, getStoreSettings, insertProduct, insertSupplier, listOrders, listProducts, listPurchaseOrders, listSuppliers, removeProductImage, storagePathFromPublicUrl, updateProduct, uploadProductImage, updateStoreSettings, type SupabasePurchaseOrder, type SupabaseSupplier } from "@/lib/supabase";
 import {
   AlertTriangle, ArrowDownToLine, ArrowUpRight, BarChart3, Bell, Boxes, Check, ChevronDown,
@@ -274,7 +275,19 @@ export default function Home() {
   const [supplierModal, setSupplierModal] = useState(false);
   const [settingsModal, setSettingsModal] = useState<"shop" | "invoice" | "payment" | null>(null);
   const [ordersModal, setOrdersModal] = useState(false);
-  const [storeInfo, setStoreInfo] = useState({ address: "158/22/36 đường Nguyễn Việt Hồng, P. Ninh Kiều, TP. Cần Thơ", phone: "0907 697 036", bank: "MB Bank", account: "3633366568686", accountName: "LINH FARM", fanpageUrl: "https://www.facebook.com/traicaymientayngonre/" });
+  const [storeInfo, setStoreInfo] = useState<StoreSettingsData>({
+    address: "158/22/36 đường Nguyễn Việt Hồng, P. Ninh Kiều, TP. Cần Thơ",
+    phone: "0907 697 036",
+    bank_bin: "970422",
+    bank_short_name: "MBBank",
+    bank_name: "Ngân hàng TMCP Quân đội",
+    bank_account: "3633366568686",
+    account_name: "LINH FARM",
+    fanpageUrl: "https://www.facebook.com/traicaymientayngonre/",
+    bank: "MBBank",
+    account: "3633366568686",
+    accountName: "LINH FARM"
+  });
   const [category, setCategory] = useState("Tất cả");
   const [query, setQuery] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">(() => {
@@ -317,19 +330,84 @@ export default function Home() {
     });
     getStoreSettings().then(({ data }) => {
       if (cancelled) return;
-      if (data) {
-        setStoreInfo({
-          address: data.address || "158/22/36 đường Nguyễn Việt Hồng, P. Ninh Kiều, TP. Cần Thơ",
-          phone: data.phone || "0907 697 036",
-          bank: data.bank_name || "MB Bank",
-          account: data.bank_account || "3633366568686",
-          accountName: data.account_name || "LINH FARM",
-          fanpageUrl: data.fanpage_url || "https://www.facebook.com/traicaymientayngonre/"
-        });
-      }
+      const loaded: StoreSettingsData = {
+        address: data?.address || "158/22/36 đường Nguyễn Việt Hồng, P. Ninh Kiều, TP. Cần Thơ",
+        phone: data?.phone || "0907 697 036",
+        bank_bin: data?.bank_bin || "970422",
+        bank_short_name: data?.bank_short_name || data?.bank_name || "MBBank",
+        bank_name: data?.bank_name || "Ngân hàng TMCP Quân đội",
+        bank_account: data?.bank_account || data?.account_number || "3633366568686",
+        account_name: data?.account_name || "LINH FARM",
+        fanpageUrl: data?.fanpage_url || "https://www.facebook.com/traicaymientayngonre/",
+        bank: data?.bank_short_name || data?.bank_name || "MBBank",
+        account: data?.bank_account || data?.account_number || "3633366568686",
+        accountName: data?.account_name || "LINH FARM"
+      };
+      try {
+        const local = localStorage.getItem("linhfarm_store_settings");
+        if (local) {
+          const parsed = JSON.parse(local);
+          if (parsed.bank_bin) loaded.bank_bin = parsed.bank_bin;
+          if (parsed.bank_short_name) {
+            loaded.bank_short_name = parsed.bank_short_name;
+            loaded.bank = parsed.bank_short_name;
+          }
+          if (parsed.bank_name) loaded.bank_name = parsed.bank_name;
+          if (parsed.bank_account) {
+            loaded.bank_account = parsed.bank_account;
+            loaded.account = parsed.bank_account;
+          }
+          if (parsed.account_name) {
+            loaded.account_name = parsed.account_name;
+            loaded.accountName = parsed.account_name;
+          }
+        }
+      } catch {}
+      setStoreInfo(loaded);
     });
     return () => { cancelled = true; };
   }, []);
+
+  const handleSaveStoreSettings = async (next: StoreSettingsData) => {
+    const updatedWithAliases: StoreSettingsData = {
+      ...next,
+      bank: next.bank_short_name || next.bank_name || "MBBank",
+      account: next.bank_account,
+      accountName: next.account_name
+    };
+    setStoreInfo(updatedWithAliases);
+    try {
+      localStorage.setItem("linhfarm_store_settings", JSON.stringify(updatedWithAliases));
+    } catch (err) {
+      console.warn("Failed to update localStorage", err);
+    }
+
+    const supabasePayload: Record<string, any> = {
+      address: next.address,
+      phone: next.phone,
+      bank_bin: next.bank_bin,
+      bank_short_name: next.bank_short_name,
+      bank_name: next.bank_name,
+      bank_account: next.bank_account,
+      account_name: next.account_name,
+      fanpage_url: next.fanpageUrl || ""
+    };
+
+    const { error } = await updateStoreSettings(supabasePayload);
+    if (error && (error as any).code === "PGRST204") {
+      await updateStoreSettings({
+        address: next.address,
+        phone: next.phone,
+        bank_name: next.bank_name || next.bank_short_name,
+        bank_account: next.bank_account,
+        account_name: next.account_name,
+        fanpage_url: next.fanpageUrl || ""
+      });
+    }
+
+    setSettingsModal(null);
+    toast.success("Đã lưu thông tin cài đặt ngân hàng VietQR!");
+  };
 
   const handleAddSupplier = async (supplierData: { name: string; phone?: string; address?: string; note?: string }) => {
     const { data, error } = await insertSupplier(supplierData);
@@ -651,13 +729,13 @@ export default function Home() {
               {payment === "Chuyển khoản" && (
                 <div className="qr-preview flex items-center gap-2.5 p-2 bg-emerald-50/80 border border-emerald-200/80 rounded-xl">
                   <img
-                    src={buildVietQrUrl(storeInfo.bank, storeInfo.account, storeInfo.accountName, total, currentOrderCode || "LF-PREVIEW")}
+                    src={buildVietQrUrl(storeInfo.bank_bin || storeInfo.bank_short_name, storeInfo.bank_account, storeInfo.account_name, total, currentOrderCode || "LF-PREVIEW")}
                     alt="VietQR Quick"
                     className="w-12 h-12 object-contain rounded bg-white p-0.5 border border-emerald-100 shrink-0"
                   />
                   <div className="flex flex-col min-w-0">
                     <b className="text-[11px] font-bold text-emerald-800">VietQR Tự Động · {formatMoney(total)}</b>
-                    <span className="text-[10px] text-slate-500 truncate">{storeInfo.bank} · {storeInfo.account} · {storeInfo.accountName}</span>
+                    <span className="text-[10px] text-slate-600 font-medium truncate">{storeInfo.bank_short_name || storeInfo.bank_name} · {storeInfo.bank_account} · {storeInfo.account_name}</span>
                   </div>
                 </div>
               )}
@@ -673,7 +751,7 @@ export default function Home() {
       {productModal && <ProductModal mode={productModal.mode} product={productModal.product} onClose={() => setProductModal(null)} onSave={saveProduct} />}
       {supplierModal && <SupplierModal products={products} suppliers={suppliers} onClose={() => setSupplierModal(false)} onSave={(supplierName, items, supplierId, note) => handleSavePurchaseOrder(supplierName, items, supplierId, note)} onAddSupplier={() => setNewSupplierModal(true)} />}
       {newSupplierModal && <NewSupplierModal onClose={() => setNewSupplierModal(false)} onSave={handleAddSupplier} />}
-      {settingsModal && <SettingsModal kind={settingsModal} info={storeInfo} onClose={() => setSettingsModal(null)} onSave={next => { updateStoreSettings({ address: next.address, phone: next.phone, bank_name: next.bank, bank_account: next.account, account_name: next.accountName, fanpage_url: next.fanpageUrl || "" }); setStoreInfo({ ...next, fanpageUrl: next.fanpageUrl || "" }); setSettingsModal(null); toast.success("Đã lưu thông tin cài đặt"); }} />}
+      {settingsModal && <SettingsModal kind={settingsModal} info={storeInfo} onClose={() => setSettingsModal(null)} onSave={handleSaveStoreSettings} />}
       {ordersModal && <OrderHistoryModal storeInfo={storeInfo} cashier={role === "Nhân viên bán hàng" ? "Nhân viên POS" : "Quản lý (Linh Trần)"} onClose={() => setOrdersModal(false)} onReprint={reOrder => { setCurrentOrderCode(reOrder.order_code); setPayment(reOrder.payment_method || "Chuyển khoản"); setBillCart((reOrder.order_items || []).map((item: any) => ({ id: item.product_id, name: item.product_name, price: Number(item.unit_price || 0), qty: Number(item.quantity || 1), selectedUnit: item.unit || "Kg" }))); setShowBill(true); }} onRefreshProducts={() => listProducts().then(({ data }) => data && setProducts(data.map(toUiProduct)))} />}
     </main><nav className="fixed bottom-0 inset-x-0 bg-white/95 backdrop-blur-md border-t border-slate-200/80 z-40 lg:hidden flex items-center justify-around py-2 px-1 shadow-lg">{navItems.map(item => <button key={item.id} type="button" className={`flex flex-col items-center gap-1 py-1.5 px-3 rounded-xl transition-all cursor-pointer ${active === item.id ? "text-emerald-700 font-bold bg-emerald-50" : "text-slate-500 font-medium hover:text-slate-800"}`} onClick={() => handleTabChange(item.id)}><item.icon size={20} /><span className="text-[10px]">{item.short || item.label}</span></button>)}</nav>
     {showBill && <BillModal total={billCart.reduce((sum, item) => sum + item.price * item.qty, 0)} cart={billCart} payment={payment} orderCode={currentOrderCode} storeInfo={storeInfo} cashier={role === "Nhân viên bán hàng" ? "Nhân viên POS" : "Quản lý (Linh Trần)"} onClose={() => setShowBill(false)} />}
@@ -1461,51 +1539,7 @@ function NewSupplierModal({ onClose, onSave }: { onClose: () => void; onSave: (s
   );
 }
 
-function SettingsPage({ storeInfo, onEdit }: { storeInfo: { address: string; phone: string; bank: string; account: string; accountName: string }; onEdit: (kind: "shop" | "invoice" | "payment" | "orders") => void }) {
-  const items = [
-    { icon: Receipt, title: "Lịch sử & Quản lý hóa đơn", detail: "Tra cứu, in lại hoặc hủy đơn hàng xuất nhầm", kind: "orders" as const },
-    { icon: FileText, title: "Thông tin hóa đơn", detail: `${storeInfo.address} · ${storeInfo.phone}`, kind: "invoice" as const },
-    { icon: CreditCard, title: "Thanh toán & VietQR", detail: `${storeInfo.bank} · ${storeInfo.accountName} · ${storeInfo.account}`, kind: "payment" as const },
-    { icon: Bell, title: "Thông báo tồn kho", detail: "Cảnh báo khi sản phẩm dưới mức tối thiểu" },
-    { icon: Settings, title: "Giao diện & thiết bị", detail: "Máy in nhiệt · 80mm · Tiếng Việt" }
-  ];
 
-  return (
-    <section className="page-section settings-page">
-      <div className="settings-card shop-profile-card">
-        <div className="big-logo">
-          <img src={assets.logo} alt="LinhFarm Logo" onError={e => { e.currentTarget.src = "/logo.webp"; }} />
-        </div>
-        <div>
-          <h3>LinhFarm · Đà Lạt</h3>
-          <p>{storeInfo.address}</p>
-          <span>Đang hoạt động · {storeInfo.phone}</span>
-        </div>
-        <button className="outline-button" onClick={() => onEdit("shop")}>Chỉnh sửa</button>
-      </div>
-
-      <div className="settings-list">
-        {items.map(x => (
-          <button className="settings-row" key={x.title} onClick={() => x.kind && onEdit(x.kind)}>
-            <span className="settings-icon"><x.icon size={18} /></span>
-            <span>
-              <strong>{x.title}</strong>
-              <small>{x.detail}</small>
-            </span>
-            <ArrowUpRight size={17} />
-          </button>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function SettingsModal({ kind, info, onClose, onSave }: { kind: "shop" | "invoice" | "payment"; info: { address: string; phone: string; bank: string; account: string; accountName: string; fanpageUrl?: string }; onClose: () => void; onSave: (info: { address: string; phone: string; bank: string; account: string; accountName: string; fanpageUrl?: string }) => void }) {
-  const [form, setForm] = useState(info);
-  const update = (key: keyof typeof info, value: string) => setForm(current => ({ ...current, [key]: value }));
-  const title = kind === "payment" ? "Thanh toán & VietQR" : kind === "invoice" ? "Thông tin hóa đơn" : "Thông tin cửa hàng";
-  return <div className="modal-overlay"><form className="form-modal" onSubmit={e => { e.preventDefault(); onSave(form); }}><div className="modal-head"><div><span className="eyebrow">Cài đặt LinhFarm</span><h2>{title}</h2></div><button type="button" className="icon-button" onClick={onClose}><X size={19} /></button></div><div className="form-grid">{kind !== "payment" && <><label>Địa chỉ cửa hàng<textarea rows={2} value={form.address} onChange={e => update("address", e.target.value)} /></label><label>Số điện thoại<input value={form.phone} onChange={e => update("phone", e.target.value)} /></label></>}{kind === "payment" && <><label>Ngân hàng<input value={form.bank} onChange={e => update("bank", e.target.value)} /></label><label>Số tài khoản<input value={form.account} onChange={e => update("account", e.target.value)} /></label><label className="full-field">Tên chủ tài khoản<input value={form.accountName} onChange={e => update("accountName", e.target.value)} /></label><label className="full-field">Link Fanpage / Facebook Cửa Hàng<input value={form.fanpageUrl || ""} onChange={e => update("fanpageUrl", e.target.value)} placeholder="https://facebook.com/linhfarm.dalat" /></label></>}{kind === "invoice" && <label className="flex flex-col gap-1.5 text-xs font-semibold text-slate-700">Khổ giấy<FormSelect value="80mm" onValueChange={() => { }} options={[{ value: "58mm", label: "58mm (K58)" }, { value: "80mm", label: "80mm (K80)" }]} /></label>}</div><div className="modal-actions"><button type="button" className="outline-button" onClick={onClose}>Hủy</button><button type="submit" className="primary-button"><Check size={16} /> Lưu cài đặt</button></div></form></div>;
-}
 
 function QrPaymentModal({
   total,
@@ -1516,11 +1550,14 @@ function QrPaymentModal({
 }: {
   total: number;
   orderCode: string;
-  storeInfo: { address: string; phone: string; bank: string; account: string; accountName: string };
+  storeInfo: StoreSettingsData;
   onConfirm: () => void;
   onClose: () => void;
 }) {
-  const qrUrl = buildVietQrUrl(storeInfo.bank, storeInfo.account, storeInfo.accountName, total, orderCode);
+  const bankBin = storeInfo.bank_bin || "970422";
+  const accountNumber = storeInfo.bank_account;
+  const bankLabel = storeInfo.bank_short_name || storeInfo.bank_name || "MBBank";
+  const qrUrl = buildVietQrUrl(bankBin, accountNumber, storeInfo.account_name, total, orderCode);
 
   const copyText = (text: string, label: string) => {
     navigator.clipboard?.writeText(text);
@@ -1546,21 +1583,24 @@ function QrPaymentModal({
               className="w-full h-full object-contain"
             />
           </div>
-          <span className="text-[11px] text-slate-500 font-medium">Mở app Ngân hàng quét mã QR để chuyển khoản</span>
+          <span className="text-xs font-semibold text-emerald-800 text-center mt-1">
+            {bankLabel} · {accountNumber} · {storeInfo.account_name}
+          </span>
+          <span className="text-[11px] text-slate-500 font-medium mt-0.5">Mở app Ngân hàng quét mã QR để chuyển khoản</span>
         </div>
 
         <div className="space-y-2 text-xs text-slate-700 bg-emerald-50/70 border border-emerald-200/80 rounded-xl p-3 mb-4">
           <div className="flex justify-between items-center">
             <span className="text-slate-500 font-medium">Ngân hàng:</span>
-            <strong className="text-slate-800 font-semibold">{storeInfo.bank}</strong>
+            <strong className="text-slate-800 font-semibold">{bankLabel} ({bankBin})</strong>
           </div>
           <div className="flex justify-between items-center">
             <span className="text-slate-500 font-medium">Số tài khoản:</span>
             <div className="flex items-center gap-1.5">
-              <strong className="text-emerald-700 font-mono text-sm font-bold">{storeInfo.account}</strong>
+              <strong className="text-emerald-700 font-mono text-sm font-bold">{accountNumber}</strong>
               <button
                 type="button"
-                onClick={() => copyText(storeInfo.account, "Số tài khoản")}
+                onClick={() => copyText(accountNumber, "Số tài khoản")}
                 className="p-1 text-slate-400 hover:text-emerald-600 transition-colors"
                 title="Copy STK"
               >
@@ -1570,7 +1610,7 @@ function QrPaymentModal({
           </div>
           <div className="flex justify-between items-center">
             <span className="text-slate-500 font-medium">Chủ tài khoản:</span>
-            <strong className="text-slate-800 uppercase font-semibold">{storeInfo.accountName}</strong>
+            <strong className="text-slate-800 uppercase font-semibold">{storeInfo.account_name}</strong>
           </div>
           <div className="flex justify-between items-center">
             <span className="text-slate-500 font-medium">Số tiền:</span>
@@ -1613,12 +1653,16 @@ function QrPaymentModal({
   );
 }
 
-function BillModal({ total, cart, payment, orderCode, storeInfo, cashier, onClose }: { total: number; cart: CartItem[]; payment: string; orderCode: string; storeInfo: { address: string; phone: string; bank: string; account: string; accountName: string; fanpageUrl?: string }; cashier?: string; onClose: () => void }) {
+function BillModal({ total, cart, payment, orderCode, storeInfo, cashier, onClose }: { total: number; cart: CartItem[]; payment: string; orderCode: string; storeInfo: StoreSettingsData; cashier?: string; onClose: () => void }) {
   const billRef = useRef<HTMLDivElement>(null);
   const [downloading, setDownloading] = useState(false);
   const [copying, setCopying] = useState(false);
   const displayCode = orderCode || "LF-1308-043";
-  const qrUrl = buildVietQrUrl(storeInfo.bank, storeInfo.account, storeInfo.accountName, total, displayCode);
+
+  const bankBin = storeInfo.bank_bin || "970422";
+  const accountNumber = storeInfo.bank_account;
+  const bankLabel = storeInfo.bank_short_name || storeInfo.bank_name || "MBBank";
+  const qrUrl = buildVietQrUrl(bankBin, accountNumber, storeInfo.account_name, total, displayCode);
 
   const downloadBillImage = async () => {
     if (!billRef.current) return;
@@ -1714,7 +1758,10 @@ function BillModal({ total, cart, payment, orderCode, storeInfo, cashier, onClos
                     className="w-full h-full object-contain"
                   />
                 </div>
-                <span className="text-[11px] text-slate-400 font-medium mt-1">Quét mã để thanh toán nhanh</span>
+                <span className="text-[11px] text-slate-700 font-semibold mt-1">
+                  {bankLabel} · {accountNumber} · {storeInfo.account_name}
+                </span>
+                <span className="text-[10px] text-slate-400 font-medium">Quét mã để thanh toán nhanh</span>
               </div>
             ) : (
               <div className="mt-3 flex justify-center">
