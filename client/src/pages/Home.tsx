@@ -1,7 +1,7 @@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 /* Vườn Sáng: mobile-first editorial rhythm, leaf-green actions, warm paper surfaces, and tactile operational feedback. */
-import { useAuth } from "@/_core/hooks/useAuth";
+import { useAuth } from "@/contexts/AuthContext";
 import { getMenuDirection, type MenuDirection } from "@/lib/menu-position";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toBlob, toPng } from "html-to-image";
@@ -9,11 +9,12 @@ import { toast } from "sonner";
 import { OrderHistoryModal } from "@/components/OrderHistoryModal";
 import { buildVietQrUrl } from "@/lib/vietqr";
 import { SettingsPage, SettingsModal, type StoreSettingsData } from "./Settings";
+import { SidebarNavigation, MobileNavigation, NAV_ITEMS } from "@/components/Navigation";
 import { cancelOrder, createOrder, createPurchaseOrder, deleteProduct as deleteSupabaseProduct, getStoreSettings, insertProduct, insertSupplier, listOrders, listProducts, listPurchaseOrders, listSuppliers, removeProductImage, storagePathFromPublicUrl, updateProduct, uploadProductImage, updateStoreSettings, type SupabasePurchaseOrder, type SupabaseSupplier } from "@/lib/supabase";
 import {
   AlertTriangle, ArrowDownToLine, ArrowUpRight, BarChart3, Bell, Boxes, Check, ChevronDown,
   CircleDollarSign, ClipboardList, Copy, CreditCard, FileText, History, LayoutGrid, Leaf, List,
-  Menu, Minus, MoreHorizontal, PackagePlus, Plus, Printer, Receipt, RotateCcw, ScanLine, Search, Settings,
+  Lock, Menu, Minus, MoreHorizontal, PackagePlus, Plus, Printer, Receipt, RotateCcw, ScanLine, Search, Settings,
   ShoppingBasket, ShoppingCart, Sparkles, Store, Trash2, TrendingUp, Truck,
   WalletCards, X, XCircle
 } from "lucide-react";
@@ -233,16 +234,29 @@ function CartItemQtyInput({
 }
 
 export default function Home() {
-  // The useAuth hook provides authentication state.
-  // To implement login/logout, call logout(), or start login from an event
-  // handler: onClick={() => startLogin()} (imported from "@/const"). Never call
-  // startLogin() during render (no href={startLogin()}) — it mints a one-time
-  // nonce cookie and must run only at the moment of navigation.
-  let { user, loading, error, isAuthenticated, logout } = useAuth();
+  const { user, signOut, role, roleLabel, isOwner, isStaff, fullName } = useAuth();
 
-  const [active, setActive] = useState<string>(getInitialTab);
+  const userInitials = fullName
+    .split(" ")
+    .map((n: string) => n[0])
+    .filter(Boolean)
+    .join("")
+    .slice(0, 2)
+    .toUpperCase() || "LT";
+
+  const [active, setActive] = useState<string>(() => {
+    const initial = getInitialTab();
+    if (isStaff && (initial === "suppliers" || initial === "dashboard" || initial === "settings")) {
+      return "pos";
+    }
+    return initial;
+  });
 
   const handleTabChange = (nextTab: string) => {
+    if (isStaff && (nextTab === "suppliers" || nextTab === "dashboard" || nextTab === "settings")) {
+      toast.error("Bạn cần quyền Quản lý để truy cập mục này");
+      return;
+    }
     setActive(nextTab);
     try {
       localStorage.setItem("linhfarm_active_tab", nextTab);
@@ -253,6 +267,13 @@ export default function Home() {
       console.warn("Failed to update tab URL or localStorage", err);
     }
   };
+
+  useEffect(() => {
+    if (isStaff && (active === "suppliers" || active === "dashboard" || active === "settings")) {
+      toast.error("Bạn cần quyền Quản lý để truy cập mục này");
+      setActive("pos");
+    }
+  }, [isStaff, active]);
 
   useEffect(() => {
     const onPopState = () => {
@@ -270,8 +291,6 @@ export default function Home() {
   const [productModal, setProductModal] = useState<{ mode: "add" | "edit"; product?: Product } | null>(null);
   const [productMenu, setProductMenu] = useState<number | null>(null);
   const [headerPanel, setHeaderPanel] = useState<"notifications" | "profile" | null>(null);
-  const [role, setRole] = useState("Chủ cửa hàng");
-  const [signedIn, setSignedIn] = useState(true);
   const [supplierModal, setSupplierModal] = useState(false);
   const [settingsModal, setSettingsModal] = useState<"shop" | "invoice" | "payment" | null>(null);
   const [ordersModal, setOrdersModal] = useState(false);
@@ -587,8 +606,8 @@ export default function Home() {
     { id: "settings", label: "Cài đặt", short: "Cài đặt", icon: Settings },
   ];
   return <div className="app-shell flex h-screen w-screen overflow-hidden bg-slate-50">
-    <aside className="sidebar hidden lg:flex shrink-0"><div className="brand flex items-center gap-3"><img src={assets.logo} alt="LinhFarm Logo" className="w-10 h-10 rounded-full object-cover border border-slate-200/80 shadow-xs overflow-hidden flex-shrink-0" onError={e => { e.currentTarget.src = "/logo.webp"; }} /><div><strong>Linh<span>Farm</span></strong><small>Đà Lạt · 01</small></div></div><div className="shop-switch"><Store size={16} /><span>Cửa hàng trung tâm</span><ChevronDown size={15} /></div><nav>{navItems.map(item => <button key={item.id} className={active === item.id ? "nav-active" : ""} onClick={() => handleTabChange(item.id)}><item.icon size={19} /><span>{item.label}</span>{active === item.id && <i />}</button>)}</nav><div className="side-note"><Sparkles size={16} /><div><b>Mùa dâu Đà Lạt</b><span>Doanh thu đang tăng 18%</span></div></div><div className="profile"><div className="avatar">LT</div><div><b>Linh Trần</b><span>Quản lý cửa hàng</span></div><MoreHorizontal size={18} /></div></aside>
-    <main className="main-area flex-1 min-w-0 flex flex-col h-full overflow-hidden relative"><header className="topbar w-full max-w-full flex items-center justify-between p-3 md:p-4 bg-white/60 border-b border-slate-100 flex-shrink-0 gap-3"><div className="flex items-center gap-2 lg:hidden shrink-0"><img src={assets.logo} alt="LinhFarm" className="w-8 h-8 rounded-full object-cover border border-slate-200/80 shadow-xs" onError={e => { e.currentTarget.src = "/logo.webp"; }} /><span className="font-bold text-slate-800 text-sm">LinhFarm</span></div><div className="header-title min-w-0 flex-1"><span className="eyebrow text-[11px] md:text-xs text-emerald-700 font-medium flex items-center gap-1">🍃 THỨ TƯ, 13 THÁNG 8, 2026</span><h1 className="text-base md:text-lg lg:text-xl font-bold text-slate-800 truncate mt-0.5">{active === "pos" ? "Sáng nay bán gì tươi nhất?" : navItems.find(x => x.id === active)?.label}</h1></div><div className="top-actions flex items-center gap-2 flex-shrink-0"><div className="header-popover-wrap relative"><button type="button" className={`w-9 h-9 rounded-full bg-white border border-slate-200 shadow-sm flex items-center justify-center text-slate-600 hover:bg-slate-50 transition-colors relative cursor-pointer ${headerPanel === "notifications" ? "ring-2 ring-emerald-500/20 border-emerald-500" : ""}`} aria-label="Thông báo cửa hàng" onClick={() => setHeaderPanel(headerPanel === "notifications" ? null : "notifications")}><Bell size={18} /><span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white" /></button>{headerPanel === "notifications" && <NotificationPopover onClose={() => setHeaderPanel(null)} />}</div><div className="header-popover-wrap relative"><button type="button" className={`flex items-center gap-2 cursor-pointer p-0.5 pr-2 rounded-full hover:bg-slate-100/80 transition-all ${headerPanel === "profile" ? "bg-slate-100" : ""}`} onClick={() => setHeaderPanel(headerPanel === "profile" ? null : "profile")}><span className="w-9 h-9 rounded-full bg-emerald-700 text-white font-semibold text-xs flex items-center justify-center shadow-sm flex-shrink-0">LT</span><span className="hidden xl:inline text-xs font-semibold text-slate-700">Linh Trần</span><ChevronDown size={14} className="text-slate-400" /></button>{headerPanel === "profile" && <ProfileMenu role={role} setRole={setRole} signedIn={signedIn} onLogout={() => { setSignedIn(false); setHeaderPanel(null); toast.success("Đã đăng xuất khỏi LinhFarm"); }} />}</div></div></header>
+    <SidebarNavigation activeTab={active} onTabChange={handleTabChange} />
+    <main className="main-area flex-1 min-w-0 flex flex-col h-full overflow-hidden relative"><header className="topbar w-full max-w-full flex items-center justify-between p-3 md:p-4 bg-white/60 border-b border-slate-100 flex-shrink-0 gap-3"><div className="flex items-center gap-2 lg:hidden shrink-0"><img src={assets.logo} alt="LinhFarm" className="w-8 h-8 rounded-full object-cover border border-slate-200/80 shadow-xs" onError={e => { e.currentTarget.src = "/logo.webp"; }} /><span className="font-bold text-slate-800 text-sm">LinhFarm</span></div><div className="header-title min-w-0 flex-1"><span className="eyebrow text-[11px] md:text-xs text-emerald-700 font-medium flex items-center gap-1">🍃 THỨ TƯ, 13 THÁNG 8, 2026</span><h1 className="text-base md:text-lg lg:text-xl font-bold text-slate-800 truncate mt-0.5">{active === "pos" ? "Sáng nay bán gì tươi nhất?" : NAV_ITEMS.find(x => x.id === active)?.label}</h1></div><div className="top-actions flex items-center gap-2 flex-shrink-0"><div className="header-popover-wrap relative"><button type="button" className={`w-9 h-9 rounded-full bg-white border border-slate-200 shadow-sm flex items-center justify-center text-slate-600 hover:bg-slate-50 transition-colors relative cursor-pointer ${headerPanel === "notifications" ? "ring-2 ring-emerald-500/20 border-emerald-500" : ""}`} aria-label="Thông báo cửa hàng" onClick={() => setHeaderPanel(headerPanel === "notifications" ? null : "notifications")}><Bell size={18} /><span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white" /></button>{headerPanel === "notifications" && <NotificationPopover onClose={() => setHeaderPanel(null)} />}</div><div className="header-popover-wrap relative"><button type="button" className={`flex items-center gap-2 cursor-pointer p-0.5 pr-2 rounded-full hover:bg-slate-100/80 transition-all ${headerPanel === "profile" ? "bg-slate-100" : ""}`} onClick={() => setHeaderPanel(headerPanel === "profile" ? null : "profile")}><span className="w-9 h-9 rounded-full bg-emerald-700 text-white font-semibold text-xs flex items-center justify-center shadow-sm flex-shrink-0">{userInitials}</span><span className="hidden xl:inline text-xs font-semibold text-slate-700">{fullName}</span><ChevronDown size={14} className="text-slate-400" /></button>{headerPanel === "profile" && <ProfileMenu user={user} onLogout={async () => { setHeaderPanel(null); await signOut(); }} />}</div></div></header>
       {active === "pos" && (
         <section className="workspace pos-workspace flex flex-col lg:flex-row gap-4 p-3 md:p-4 w-full min-h-screen lg:h-[calc(100vh-70px)] overflow-y-auto lg:overflow-hidden pb-28 lg:pb-4 flex-1">
           <div className="products-panel w-full lg:flex-1 flex flex-col gap-3 min-w-0">
@@ -752,10 +771,9 @@ export default function Home() {
       {supplierModal && <SupplierModal products={products} suppliers={suppliers} onClose={() => setSupplierModal(false)} onSave={(supplierName, items, supplierId, note) => handleSavePurchaseOrder(supplierName, items, supplierId, note)} onAddSupplier={() => setNewSupplierModal(true)} />}
       {newSupplierModal && <NewSupplierModal onClose={() => setNewSupplierModal(false)} onSave={handleAddSupplier} />}
       {settingsModal && <SettingsModal kind={settingsModal} info={storeInfo} onClose={() => setSettingsModal(null)} onSave={handleSaveStoreSettings} />}
-      {ordersModal && <OrderHistoryModal storeInfo={storeInfo} cashier={role === "Nhân viên bán hàng" ? "Nhân viên POS" : "Quản lý (Linh Trần)"} onClose={() => setOrdersModal(false)} onReprint={reOrder => { setCurrentOrderCode(reOrder.order_code); setPayment(reOrder.payment_method || "Chuyển khoản"); setBillCart((reOrder.order_items || []).map((item: any) => ({ id: item.product_id, name: item.product_name, price: Number(item.unit_price || 0), qty: Number(item.quantity || 1), selectedUnit: item.unit || "Kg" }))); setShowBill(true); }} onRefreshProducts={() => listProducts().then(({ data }) => data && setProducts(data.map(toUiProduct)))} />}
-    </main><nav className="fixed bottom-0 inset-x-0 bg-white/95 backdrop-blur-md border-t border-slate-200/80 z-40 lg:hidden flex items-center justify-around py-2 px-1 shadow-lg">{navItems.map(item => <button key={item.id} type="button" className={`flex flex-col items-center gap-1 py-1.5 px-3 rounded-xl transition-all cursor-pointer ${active === item.id ? "text-emerald-700 font-bold bg-emerald-50" : "text-slate-500 font-medium hover:text-slate-800"}`} onClick={() => handleTabChange(item.id)}><item.icon size={20} /><span className="text-[10px]">{item.short || item.label}</span></button>)}</nav>
-    {showBill && <BillModal total={billCart.reduce((sum, item) => sum + item.price * item.qty, 0)} cart={billCart} payment={payment} orderCode={currentOrderCode} storeInfo={storeInfo} cashier={role === "Nhân viên bán hàng" ? "Nhân viên POS" : "Quản lý (Linh Trần)"} onClose={() => setShowBill(false)} />}
-    {!signedIn && <div className="signed-out-banner"><span>Phiên làm việc đã kết thúc.</span><button onClick={() => setSignedIn(true)}>Đăng nhập lại</button></div>}
+      {ordersModal && <OrderHistoryModal storeInfo={storeInfo} cashier={isStaff ? "Nhân viên POS" : `Quản lý (${fullName})`} onClose={() => setOrdersModal(false)} onReprint={reOrder => { setCurrentOrderCode(reOrder.order_code); setPayment(reOrder.payment_method || "Chuyển khoản"); setBillCart((reOrder.order_items || []).map((item: any) => ({ id: item.product_id, name: item.product_name, price: Number(item.unit_price || 0), qty: Number(item.quantity || 1), selectedUnit: item.unit || "Kg" }))); setShowBill(true); }} onRefreshProducts={() => listProducts().then(({ data }) => data && setProducts(data.map(toUiProduct)))} />}
+    </main><MobileNavigation activeTab={active} onTabChange={handleTabChange} />
+    {showBill && <BillModal total={billCart.reduce((sum, item) => sum + item.price * item.qty, 0)} cart={billCart} payment={payment} orderCode={currentOrderCode} storeInfo={storeInfo} cashier={isStaff ? "Nhân viên POS" : `Quản lý (${fullName})`} onClose={() => setShowBill(false)} />}
   </div>;
 }
 
@@ -1806,8 +1824,88 @@ function NotificationPopover({ onClose }: { onClose: () => void }) {
   return <div className="header-popover notification-popover"><div className="popover-heading"><div><span className="eyebrow">Trung tâm vận hành</span><h3>Thông báo cửa hàng</h3></div><button className="text-button" onClick={onClose}>Đóng</button></div><div className="notification-list">{notifications.map(n => <div className="notification-item" key={n.title}><span className={`notification-icon ${n.tone}`}><n.icon size={15} /></span><div><strong>{n.title}</strong><span>{n.detail}</span><small>{n.time}</small></div></div>)}</div><button className="notification-footer" onClick={() => { toast.success("Đã đánh dấu tất cả là đã đọc"); onClose(); }}>Đánh dấu tất cả đã đọc <Check size={14} /></button></div>;
 }
 
-function ProfileMenu({ role, setRole, signedIn, onLogout }: { role: string; setRole: (role: string) => void; signedIn: boolean; onLogout: () => void }) {
-  return <div className="header-popover profile-popover"><div className="profile-summary"><div className="avatar profile-avatar">LT</div><div><strong>Linh Trần</strong><span>{signedIn ? "linh@linhfarm.vn" : "Đã đăng xuất"}</span></div></div><div className="profile-divider" /><span className="profile-label">Vai trò hiện tại</span><div className="role-options"><button className={role === "Chủ cửa hàng" ? "role-selected" : ""} onClick={() => { setRole("Chủ cửa hàng"); toast.success("Đã chọn vai trò Chủ cửa hàng"); }}><Store size={15} /><span><strong>Chủ cửa hàng</strong><small>Toàn quyền vận hành</small></span>{role === "Chủ cửa hàng" && <Check size={15} />}</button><button className={role === "Nhân viên bán hàng" ? "role-selected" : ""} onClick={() => { setRole("Nhân viên bán hàng"); toast.success("Đã chọn vai trò Nhân viên bán hàng"); }}><ShoppingBasket size={15} /><span><strong>Nhân viên bán hàng</strong><small>Chỉ thao tác POS</small></span>{role === "Nhân viên bán hàng" && <Check size={15} />}</button></div><button className="logout-button" onClick={onLogout}><ArrowDownToLine size={15} /> Đăng xuất</button></div>;
+function ProfileMenu({ user, onLogout }: { user: any; onLogout: () => void }) {
+  const { isOwner, isStaff, roleLabel, fullName } = useAuth();
+  const email = user?.email || "admin@linhfarm.vn";
+  const initials = fullName.split(" ").map((n: string) => n[0]).filter(Boolean).join("").slice(0, 2).toUpperCase() || "LT";
+
+  return (
+    <div className="header-popover profile-popover shadow-xl rounded-2xl border border-slate-200 p-3.5 bg-white w-72 animate-in fade-in-50 zoom-in-95">
+      <div className="profile-summary flex items-center gap-3 p-2.5 bg-slate-50 rounded-xl mb-2 border border-slate-100">
+        <div className="avatar profile-avatar w-10 h-10 rounded-full bg-emerald-700 text-white font-bold text-sm flex items-center justify-center shrink-0 shadow-sm">
+          {initials}
+        </div>
+        <div className="min-w-0 flex-1">
+          <strong className="block text-xs font-bold text-slate-800 truncate">{fullName}</strong>
+          <span className="text-[11px] text-slate-500 truncate block font-medium">{email}</span>
+        </div>
+      </div>
+      <div className="profile-divider my-2 border-t border-slate-100" />
+      <div className="flex items-center justify-between px-1 mb-1.5">
+        <span className="profile-label text-[10px] uppercase font-bold text-slate-400">
+          Vai trò hiện tại
+        </span>
+        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+          isOwner ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-slate-100 text-slate-600 border-slate-200"
+        }`}>
+          {roleLabel}
+        </span>
+      </div>
+
+      <div className="role-options space-y-1">
+        <div
+          className={`w-full p-2.5 rounded-xl flex items-center justify-between text-xs transition-all ${
+            isOwner
+              ? "bg-emerald-50/90 border border-emerald-200/80 text-emerald-900 font-bold"
+              : "opacity-50 bg-slate-50 border border-slate-100 text-slate-400 cursor-not-allowed"
+          }`}
+        >
+          <div className="flex items-center gap-2.5 min-w-0">
+            <Store size={16} className={isOwner ? "text-emerald-700" : "text-slate-400"} />
+            <div>
+              <strong className="block text-xs">Chủ cửa hàng</strong>
+              <small className="block text-[10px] text-slate-500 font-normal">Toàn quyền vận hành hệ thống</small>
+            </div>
+          </div>
+          {isOwner ? (
+            <Check size={16} className="text-emerald-600 shrink-0" />
+          ) : (
+            <Lock size={13} className="text-slate-400 shrink-0" />
+          )}
+        </div>
+
+        <div
+          className={`w-full p-2.5 rounded-xl flex items-center justify-between text-xs transition-all ${
+            isStaff
+              ? "bg-emerald-50/90 border border-emerald-200/80 text-emerald-900 font-bold"
+              : "opacity-50 bg-slate-50 border border-slate-100 text-slate-400 cursor-not-allowed"
+          }`}
+        >
+          <div className="flex items-center gap-2.5 min-w-0">
+            <ShoppingBasket size={16} className={isStaff ? "text-emerald-700" : "text-slate-400"} />
+            <div>
+              <strong className="block text-xs">Nhân viên bán hàng</strong>
+              <small className="block text-[10px] text-slate-500 font-normal">Chỉ thao tác Bán hàng (POS)</small>
+            </div>
+          </div>
+          {isStaff ? (
+            <Check size={16} className="text-emerald-600 shrink-0" />
+          ) : (
+            <Lock size={13} className="text-slate-400 shrink-0" />
+          )}
+        </div>
+      </div>
+
+      <div className="my-2.5 border-t border-slate-100" />
+      <button
+        type="button"
+        onClick={onLogout}
+        className="w-full p-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs flex items-center justify-center gap-2 cursor-pointer transition-colors"
+      >
+        <ArrowDownToLine size={15} /> Đăng xuất khỏi LinhFarm
+      </button>
+    </div>
+  );
 }
 
 
