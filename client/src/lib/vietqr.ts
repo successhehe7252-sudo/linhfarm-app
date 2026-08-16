@@ -81,19 +81,63 @@ export const findBankByQuery = (query?: string, bankList: VietQrBank[] = DEFAULT
   );
 };
 
+export const bankMapper: Record<string, string> = {
+  "Vietcombank": "vcb",
+  "VCB": "vcb",
+  "Ngân hàng TMCP Ngoại Thương Việt Nam": "vcb",
+  "MB Bank": "mb",
+  "MBBank": "mb",
+  "MB": "mb",
+  "Ngân hàng TMCP Quân đội": "mb",
+  "Techcombank": "tcb",
+  "TCB": "tcb",
+  "Ngân hàng TMCP Kỹ thương Việt Nam": "tcb",
+  "VietinBank": "ctg",
+  "Vietinbank": "ctg",
+  "ICB": "ctg",
+  "Ngân hàng TMCP Công thương Việt Nam": "ctg",
+  "BIDV": "bidv",
+  "Ngân hàng TMCP Đầu tư và Phát triển Việt Nam": "bidv",
+  "Agribank": "vba",
+  "VBA": "vba",
+  "VPBank": "vpb",
+  "VPB": "vpb",
+  "TPBank": "tpb",
+  "TPB": "tpb",
+  "Sacombank": "stb",
+  "STB": "stb",
+  "ACB": "acb",
+  "HDBank": "hdb",
+  "VIB": "vib",
+  "MSB": "msb",
+  "OCB": "ocb",
+  "SeABank": "seab",
+  "LPBank": "lpb",
+};
+
+export const getBankId = (bankName: string, bankBin?: string): string => {
+  if (bankBin && bankBin.trim()) return bankBin.trim();
+  if (!bankName) return "";
+  const trimmed = bankName.trim();
+  if (bankMapper[trimmed]) return bankMapper[trimmed];
+  const found = findBankByQuery(trimmed);
+  if (found) return found.bin || found.code.toLowerCase();
+  return getBankSlug(trimmed).toLowerCase();
+};
+
 export const getBankSlug = (bankName: string): string => {
-  if (!bankName) return "MB";
+  if (!bankName) return "";
   const upper = bankName.toUpperCase();
-  if (upper.includes("MB")) return "MB";
-  if (upper.includes("VIETCOMBANK") || upper.includes("VCB")) return "VCB";
-  if (upper.includes("TECHCOMBANK") || upper.includes("TCB")) return "TCB";
-  if (upper.includes("BIDV")) return "BIDV";
-  if (upper.includes("VIETINBANK") || upper.includes("CTG") || upper.includes("ICB")) return "CTG";
-  if (upper.includes("ACB")) return "ACB";
-  if (upper.includes("TPBANK") || upper.includes("TPB")) return "TPB";
-  if (upper.includes("VPBANK") || upper.includes("VPB")) return "VPB";
-  if (upper.includes("SACOMBANK") || upper.includes("STB")) return "STB";
-  return upper.replace(/[^A-Z0-9]/g, "") || "MB";
+  if (upper.includes("VIETCOMBANK") || upper.includes("VCB")) return "vcb";
+  if (upper.includes("MB")) return "mb";
+  if (upper.includes("TECHCOMBANK") || upper.includes("TCB")) return "tcb";
+  if (upper.includes("BIDV")) return "bidv";
+  if (upper.includes("VIETINBANK") || upper.includes("CTG") || upper.includes("ICB")) return "ctg";
+  if (upper.includes("ACB")) return "acb";
+  if (upper.includes("TPBANK") || upper.includes("TPB")) return "tpb";
+  if (upper.includes("VPBANK") || upper.includes("VPB")) return "vpb";
+  if (upper.includes("SACOMBANK") || upper.includes("STB")) return "stb";
+  return upper.replace(/[^A-Z0-9]/g, "").toLowerCase() || "";
 };
 
 export const buildVietQrUrl = (
@@ -106,19 +150,15 @@ export const buildVietQrUrl = (
   let bankIdentifier = (bankBinOrName || "").trim();
 
   if (!bankIdentifier) {
-    bankIdentifier = "970422"; // Default MB Bank BIN
-  } else if (!/^\d+$/.test(bankIdentifier)) {
-    // If string is not numeric BIN code, look up BIN or fallback to slug
-    const found = findBankByQuery(bankIdentifier);
-    if (found && found.bin) {
-      bankIdentifier = found.bin;
-    } else {
-      bankIdentifier = getBankSlug(bankIdentifier);
-    }
+    console.warn("[VietQR] Warning: bankIdentifier is empty!");
+  } else if (/^\d+$/.test(bankIdentifier)) {
+    // Use numeric BIN code directly
+  } else {
+    bankIdentifier = getBankId(bankIdentifier);
   }
 
   const cleanAccount = (bankAccount || "").replace(/\s+/g, "");
-  const cleanAmount = Math.round(amount || 0);
+  const cleanAmount = Math.round(Number(amount || 0));
   const cleanOrderCode = encodeURIComponent(orderCode || "LF-ORDER");
   const cleanAccountName = encodeURIComponent(accountName || "");
 

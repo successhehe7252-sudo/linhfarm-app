@@ -1777,10 +1777,12 @@ function BillModal({ total, cart, payment, orderCode, storeInfo, cashier, onClos
   const [copying, setCopying] = useState(false);
   const displayCode = orderCode || "LF-1308-043";
 
-  const bankBin = storeInfo.bank_bin || "970422";
-  const accountNumber = storeInfo.bank_account;
-  const bankLabel = storeInfo.bank_short_name || storeInfo.bank_name || "MBBank";
-  const qrUrl = buildVietQrUrl(bankBin, accountNumber, storeInfo.account_name, total, displayCode);
+  const bankBin = storeInfo.bank_bin || getBankId(storeInfo.bank_short_name || storeInfo.bank_name || "");
+  const accountNumber = storeInfo.bank_account || storeInfo.account;
+  const bankNameStr = storeInfo.bank_name || storeInfo.bank_short_name || storeInfo.bank || "";
+  const bankLabel = bankNameStr || storeInfo?.bank_short_name || storeInfo?.bank_name || "Ngân hàng";
+  const accountNameStr = storeInfo.account_name || storeInfo.accountName || "LINH FARM";
+  const qrUrl = buildVietQrUrl(bankBin, accountNumber, accountNameStr, total, displayCode);
 
   const downloadBillImage = async () => {
     if (!billRef.current) return;
