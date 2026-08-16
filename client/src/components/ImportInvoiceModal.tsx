@@ -74,27 +74,50 @@ export function ImportInvoiceModal({ onClose, onSuccess }: ImportInvoiceModalPro
 
     setStep("saving");
     try {
-      // Step 1: Check or insert Supplier by name
+      // Step 1: Check or insert Supplier by tax_code first, then name
       let supplierId: number | null = null;
+      const taxCode = extractedData.supplier.tax_code ? extractedData.supplier.tax_code.trim() : "";
       const suppName = (extractedData.supplier.name || "Nhà cung cấp từ Hóa Đơn").trim();
       let supplierName = suppName;
 
-      const { data: existingSup } = await supabase
-        .from("suppliers")
-        .select("id, name")
-        .ilike("name", suppName)
-        .maybeSingle();
+      // Check by tax_code first if present
+      if (taxCode) {
+        const { data: existingByTax } = await supabase
+          .from("suppliers")
+          .select("id, name")
+          .eq("tax_code", taxCode)
+          .maybeSingle();
 
-      if (existingSup) {
-        supplierId = existingSup.id;
-      } else {
+        if (existingByTax) {
+          supplierId = existingByTax.id;
+          supplierName = existingByTax.name;
+        }
+      }
+
+      // Fallback: Check by name if tax_code query didn't match
+      if (!supplierId && suppName) {
+        const { data: existingByName } = await supabase
+          .from("suppliers")
+          .select("id, name")
+          .ilike("name", suppName)
+          .maybeSingle();
+
+        if (existingByName) {
+          supplierId = existingByName.id;
+          supplierName = existingByName.name;
+        }
+      }
+
+      // If still not found, insert new supplier with tax_code
+      if (!supplierId) {
         const { data: newSup, error: suppErr } = await supabase
           .from("suppliers")
           .insert({
             name: suppName,
+            tax_code: taxCode || "",
             phone: extractedData.supplier.phone || "",
             address: extractedData.supplier.address || "",
-            note: "Nhập từ Hóa đơn VAT (AI Gemini)",
+            note: "Import từ Hóa đơn VAT",
           })
           .select("id")
           .single();
@@ -158,7 +181,7 @@ export function ImportInvoiceModal({ onClose, onSuccess }: ImportInvoiceModalPro
         supplierName,
         poItems,
         supplierId,
-        `Nhập tự động bằng AI Gemini`,
+        `Nhập tự động`,
         extractedData.sub_total,
         extractedData.vat_amount,
         extractedData.total_amount
@@ -195,7 +218,7 @@ export function ImportInvoiceModal({ onClose, onSuccess }: ImportInvoiceModalPro
                 <span className="eyebrow text-[10px] font-bold text-emerald-600 uppercase tracking-wider">AI Gemini 1.5 Flash</span>
                 <span className="text-[10px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">Miễn phí · In-Memory</span>
               </div>
-              <h2 className="text-base md:text-lg font-bold text-slate-800">Import Hóa Đơn bằng AI</h2>
+              <h2 className="text-base md:text-lg font-bold text-slate-800">Import Hóa Đơn</h2>
             </div>
           </div>
           <button type="button" className="icon-button w-9 h-9 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 flex items-center justify-center transition-colors" onClick={onClose}>

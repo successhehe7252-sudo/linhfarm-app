@@ -31,6 +31,7 @@ export type SupabaseProduct = {
 export type SupabaseSupplier = {
   id: number;
   name: string;
+  tax_code?: string | null;
   phone?: string | null;
   address?: string | null;
   note?: string | null;
@@ -182,6 +183,7 @@ export const cancelOrder = async (orderId: number) => {
 
 export const listSuppliers = async () => supabase.from("suppliers").select("*").order("id", { ascending: true });
 export const insertSupplier = async (supplier: Omit<SupabaseSupplier, "id">) => supabase.from("suppliers").insert(supplier).select("*").single();
+export const updateSupplier = async (id: number, supplier: Partial<SupabaseSupplier>) => supabase.from("suppliers").update(supplier).eq("id", id).select("*").single();
 export const getStoreSettings = async () => supabase.from("store_settings").select("*").eq("id", 1).single();
 export const updateStoreSettings = async (settings: Record<string, any>) => supabase.from("store_settings").update(settings).eq("id", 1).select("*").single();
 

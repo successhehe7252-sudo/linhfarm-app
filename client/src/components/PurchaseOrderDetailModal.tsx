@@ -156,6 +156,12 @@ export function PurchaseOrderDetailModal({ order, onClose }: PurchaseOrderDetail
                 </strong>
               </div>
               <div className="flex items-start gap-1.5">
+                <span className="text-slate-500 shrink-0 whitespace-nowrap">Mã số thuế:</span>
+                <strong className="text-slate-800 font-mono font-medium">
+                  {supplier?.tax_code || (order as any).supplier?.tax_code || "Không có"}
+                </strong>
+              </div>
+              <div className="flex items-start gap-1.5">
                 <span className="text-slate-500 shrink-0 whitespace-nowrap">Số điện thoại:</span>
                 <strong className="text-slate-800 font-medium">
                   {supplier?.phone || "Không có"}

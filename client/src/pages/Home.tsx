@@ -12,11 +12,11 @@ import { SettingsPage, SettingsModal, type StoreSettingsData } from "./Settings"
 import { SidebarNavigation, MobileNavigation, NAV_ITEMS } from "@/components/Navigation";
 import { ImportInvoiceModal } from "@/components/ImportInvoiceModal";
 import { PurchaseOrderDetailModal } from "@/components/PurchaseOrderDetailModal";
-import { cancelOrder, createOrder, createPurchaseOrder, deleteProduct as deleteSupabaseProduct, getStoreSettings, insertProduct, insertSupplier, listOrders, listProducts, listPurchaseOrders, listSuppliers, removeProductImage, storagePathFromPublicUrl, updateProduct, uploadProductImage, updateStoreSettings, type SupabasePurchaseOrder, type SupabaseSupplier } from "@/lib/supabase";
+import { cancelOrder, createOrder, createPurchaseOrder, deleteProduct as deleteSupabaseProduct, getStoreSettings, insertProduct, insertSupplier, listOrders, listProducts, listPurchaseOrders, listSuppliers, removeProductImage, storagePathFromPublicUrl, updateProduct, updateSupplier, uploadProductImage, updateStoreSettings, type SupabasePurchaseOrder, type SupabaseSupplier } from "@/lib/supabase";
 import {
   AlertTriangle, ArrowDownToLine, ArrowUpRight, BarChart3, Bell, Boxes, Check, ChevronDown,
   CircleDollarSign, ClipboardList, Copy, CreditCard, FileText, History, LayoutGrid, Leaf, List,
-  Lock, Menu, Minus, MoreHorizontal, PackagePlus, Plus, Printer, Receipt, RotateCcw, ScanLine, Search, Settings,
+  Lock, Menu, Minus, MoreHorizontal, PackagePlus, Pencil, Plus, Printer, Receipt, RotateCcw, ScanLine, Search, Settings,
   ShoppingBasket, ShoppingCart, Sparkles, Store, Trash2, TrendingUp, Truck,
   WalletCards, X, XCircle
 } from "lucide-react";
@@ -346,6 +346,7 @@ export default function Home() {
   const [suppliers, setSuppliers] = useState<SupabaseSupplier[]>([]);
   const [purchaseOrders, setPurchaseOrders] = useState<SupabasePurchaseOrder[]>([]);
   const [newSupplierModal, setNewSupplierModal] = useState(false);
+  const [editingSupplier, setEditingSupplier] = useState<SupabaseSupplier | null>(null);
   const [importInvoiceModal, setImportInvoiceModal] = useState(false);
   const [selectedPurchaseOrder, setSelectedPurchaseOrder] = useState<SupabasePurchaseOrder | null>(null);
   const [supabaseReady, setSupabaseReady] = useState(false);
@@ -452,7 +453,7 @@ export default function Home() {
     toast.success("Đã lưu thông tin cài đặt ngân hàng VietQR!");
   };
 
-  const handleAddSupplier = async (supplierData: { name: string; phone?: string; address?: string; note?: string }) => {
+  const handleAddSupplier = async (supplierData: { name: string; tax_code?: string; phone?: string; address?: string; note?: string }) => {
     const { data, error } = await insertSupplier(supplierData);
     if (error) {
       toast.error(`Không thể thêm nhà cung cấp: ${error.message}`);
@@ -462,6 +463,18 @@ export default function Home() {
     setNewSupplierModal(false);
     toast.success(`Đã thêm nhà cung cấp "${data.name}"`);
     return data;
+  };
+
+  const handleUpdateSupplier = async (id: number, supplierData: { name: string; tax_code?: string; phone?: string; address?: string; note?: string }) => {
+    const { data, error } = await updateSupplier(id, supplierData);
+    if (error) {
+      console.error("Lỗi cập nhật nhà cung cấp:", error);
+      toast.error(`Không thể cập nhật nhà cung cấp: ${error.message}`);
+      return;
+    }
+    setSuppliers(curr => curr.map(s => (s.id === id ? { ...s, ...data } : s)));
+    setEditingSupplier(null);
+    toast.success("Cập nhật nhà cung cấp thành công!");
   };
 
   const handleSavePurchaseOrder = async (
@@ -789,11 +802,12 @@ export default function Home() {
       )}
       {active === "dashboard" && <Dashboard period={period} setPeriod={setPeriod} />}
       {active === "products" && <Inventory products={products} latestImportDates={latestImportDates} onAdd={() => setProductModal({ mode: "add" })} onEdit={product => setProductModal({ mode: "edit", product })} onDelete={removeProduct} onMenu={setProductMenu} productMenu={productMenu} />}
-      {active === "suppliers" && <Suppliers products={products} suppliers={suppliers} purchaseOrders={purchaseOrders} onAdd={() => setSupplierModal(true)} onAddSupplier={() => setNewSupplierModal(true)} onImportAi={() => setImportInvoiceModal(true)} onSelectOrder={order => setSelectedPurchaseOrder(order)} />}
+      {active === "suppliers" && <Suppliers products={products} suppliers={suppliers} purchaseOrders={purchaseOrders} onAdd={() => setSupplierModal(true)} onAddSupplier={() => setNewSupplierModal(true)} onEditSupplier={s => setEditingSupplier(s)} onImportAi={() => setImportInvoiceModal(true)} onSelectOrder={order => setSelectedPurchaseOrder(order)} />}
       {active === "settings" && <SettingsPage storeInfo={storeInfo} onEdit={kind => { if (kind === "orders") setOrdersModal(true); else setSettingsModal(kind); }} />}
       {productModal && <ProductModal mode={productModal.mode} product={productModal.product} onClose={() => setProductModal(null)} onSave={saveProduct} />}
       {supplierModal && <SupplierModal products={products} suppliers={suppliers} onClose={() => setSupplierModal(false)} onSave={(supplierName, items, supplierId, note) => handleSavePurchaseOrder(supplierName, items, supplierId, note)} onAddSupplier={() => setNewSupplierModal(true)} />}
       {newSupplierModal && <NewSupplierModal onClose={() => setNewSupplierModal(false)} onSave={handleAddSupplier} />}
+      {editingSupplier && <EditSupplierModal supplier={editingSupplier} onClose={() => setEditingSupplier(null)} onSave={handleUpdateSupplier} />}
       {selectedPurchaseOrder && <PurchaseOrderDetailModal order={selectedPurchaseOrder} onClose={() => setSelectedPurchaseOrder(null)} />}
       {importInvoiceModal && (
         <ImportInvoiceModal
@@ -1397,7 +1411,7 @@ function ProductModal({ mode, product, onClose, onSave }: { mode: "add" | "edit"
   );
 }
 
-function Suppliers({ products, suppliers, purchaseOrders, onAdd, onAddSupplier, onImportAi, onSelectOrder }: { products: Product[]; suppliers: SupabaseSupplier[]; purchaseOrders: SupabasePurchaseOrder[]; onAdd: () => void; onAddSupplier: () => void; onImportAi: () => void; onSelectOrder: (po: SupabasePurchaseOrder) => void }) {
+function Suppliers({ products, suppliers, purchaseOrders, onAdd, onAddSupplier, onEditSupplier, onImportAi, onSelectOrder }: { products: Product[]; suppliers: SupabaseSupplier[]; purchaseOrders: SupabasePurchaseOrder[]; onAdd: () => void; onAddSupplier: () => void; onEditSupplier: (supplier: SupabaseSupplier) => void; onImportAi: () => void; onSelectOrder: (po: SupabasePurchaseOrder) => void }) {
   const totalCost = purchaseOrders.reduce((sum, po) => sum + Number(po.total_amount || 0), 0);
   const totalCostText = totalCost > 0 ? (totalCost / 1000000).toFixed(1).replace(".", ",") + " triệu" : "0đ";
 
@@ -1412,7 +1426,7 @@ function Suppliers({ products, suppliers, purchaseOrders, onAdd, onAddSupplier, 
         </div>
         <div className="flex items-center gap-2.5 flex-wrap">
           <button type="button" className="outline-button bg-white border border-emerald-300 text-emerald-700 hover:bg-emerald-50 shadow-sm flex items-center gap-2 px-3.5 py-2.5 rounded-xl font-bold text-xs transition-all cursor-pointer" onClick={onImportAi}>
-            <Sparkles size={16} className="text-emerald-600" /> Import Hóa Đơn AI
+            <Sparkles size={16} className="text-emerald-600" /> Import Hóa Đơn
           </button>
           <button type="button" className="primary-button shadow-md cursor-pointer" onClick={onAdd}><Plus size={17} /> Tạo phiếu nhập</button>
           <div className="supplier-sprout hidden sm:flex"><Leaf size={34} /></div>
@@ -1428,13 +1442,29 @@ function Suppliers({ products, suppliers, purchaseOrders, onAdd, onAddSupplier, 
             <p className="text-slate-400 text-xs py-4">Chưa có nhà cung cấp nào.</p>
           ) : (
             suppliers.map(s => (
-              <div className="supplier-row" key={s.id || s.name}>
-                <div className="supplier-avatar"><Truck size={18} /></div>
-                <div>
-                  <strong>{s.name}</strong>
-                  <span>{s.phone ? `SĐT: ${s.phone}` : s.address || "Đà Lạt"}</span>
+              <div className="supplier-row flex items-center justify-between group p-2.5 hover:bg-slate-50/80 rounded-2xl transition-all" key={s.id || s.name}>
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <div className="supplier-avatar shrink-0"><Truck size={18} /></div>
+                  <div className="min-w-0 flex-1">
+                    <strong className="block text-sm font-semibold text-slate-800 truncate">{s.name}</strong>
+                    <div className="flex items-center gap-2 text-xs text-slate-500 flex-wrap mt-0.5">
+                      {s.tax_code ? <span className="font-mono text-emerald-700 font-medium">MST: {s.tax_code}</span> : null}
+                      {s.phone ? <span>SĐT: {s.phone}</span> : null}
+                      {s.address ? <span className="truncate max-w-[150px]">{s.address}</span> : null}
+                    </div>
+                  </div>
                 </div>
-                <div className="supplier-amount"><Badge tone="green">Đang hợp tác</Badge></div>
+                <div className="supplier-amount flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => onEditSupplier(s)}
+                    className="p-1.5 text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer"
+                    title="Chỉnh sửa nhà cung cấp"
+                  >
+                    <Pencil size={15} />
+                  </button>
+                  <Badge tone="green">Đang hợp tác</Badge>
+                </div>
               </div>
             ))
           )}
@@ -1573,8 +1603,8 @@ function SupplierModal({
   );
 }
 
-function NewSupplierModal({ onClose, onSave }: { onClose: () => void; onSave: (supplier: { name: string; phone?: string; address?: string; note?: string }) => void }) {
-  const [form, setForm] = useState({ name: "", phone: "", address: "", note: "" });
+function NewSupplierModal({ onClose, onSave }: { onClose: () => void; onSave: (supplier: { name: string; tax_code?: string; phone?: string; address?: string; note?: string }) => void }) {
+  const [form, setForm] = useState({ name: "", tax_code: "", phone: "", address: "", note: "" });
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name.trim()) return toast.error("Vui lòng nhập tên nhà cung cấp");
@@ -1589,12 +1619,15 @@ function NewSupplierModal({ onClose, onSave }: { onClose: () => void; onSave: (s
         </div>
         <div className="form-grid">
           <label className="full-field">Tên nhà cung cấp *
-            <input required value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Ví dụ: Nông trại Dâu Nhật Hưng Phát" />
+            <input required value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Ví dụ: Công ty TNHH Nông Nghiệp Xanh" />
+          </label>
+          <label>Mã số thuế (MST)
+            <input value={form.tax_code} onChange={e => setForm({ ...form, tax_code: e.target.value })} placeholder="0312345678" />
           </label>
           <label>Số điện thoại
             <input value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} placeholder="0901 234 567" />
           </label>
-          <label>Địa chỉ
+          <label className="full-field">Địa chỉ
             <input value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} placeholder="Phường 11, TP. Đà Lạt" />
           </label>
           <label className="full-field">Ghi chú
@@ -1604,6 +1637,65 @@ function NewSupplierModal({ onClose, onSave }: { onClose: () => void; onSave: (s
         <div className="modal-actions">
           <button type="button" className="outline-button" onClick={onClose}>Hủy</button>
           <button type="submit" className="primary-button"><Check size={16} /> Lưu nhà cung cấp</button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+function EditSupplierModal({
+  supplier,
+  onClose,
+  onSave
+}: {
+  supplier: SupabaseSupplier;
+  onClose: () => void;
+  onSave: (id: number, updated: { name: string; tax_code?: string; phone?: string; address?: string; note?: string }) => void;
+}) {
+  const [form, setForm] = useState({
+    name: supplier.name || "",
+    tax_code: supplier.tax_code || "",
+    phone: supplier.phone || "",
+    address: supplier.address || "",
+    note: supplier.note || "",
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.name.trim()) return toast.error("Vui lòng nhập tên nhà cung cấp");
+    onSave(supplier.id, form);
+  };
+
+  return (
+    <div className="modal-overlay">
+      <form className="form-modal max-w-lg" onSubmit={handleSubmit}>
+        <div className="modal-head">
+          <div>
+            <span className="eyebrow text-emerald-600 font-bold uppercase text-[10px]">Cập nhật NCC</span>
+            <h2>Chỉnh Sửa Nhà Cung Cấp</h2>
+          </div>
+          <button type="button" className="icon-button" onClick={onClose}><X size={19} /></button>
+        </div>
+        <div className="form-grid">
+          <label className="full-field">Tên nhà cung cấp *
+            <input required value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Ví dụ: Công ty TNHH Nông Nghiệp Xanh" />
+          </label>
+          <label>Mã số thuế (MST)
+            <input value={form.tax_code} onChange={e => setForm({ ...form, tax_code: e.target.value })} placeholder="0312345678" />
+          </label>
+          <label>Số điện thoại
+            <input value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} placeholder="0901 234 567" />
+          </label>
+          <label className="full-field">Địa chỉ
+            <input value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} placeholder="Phường 11, TP. Đà Lạt" />
+          </label>
+          <label className="full-field">Ghi chú
+            <textarea rows={2} value={form.note} onChange={e => setForm({ ...form, note: e.target.value })} placeholder="Thông tin liên hệ, loại nông sản chính..." />
+          </label>
+        </div>
+        <div className="modal-actions">
+          <button type="button" className="outline-button" onClick={onClose}>Hủy</button>
+          <button type="submit" className="primary-button"><Check size={16} /> Lưu thay đổi</button>
         </div>
       </form>
     </div>
