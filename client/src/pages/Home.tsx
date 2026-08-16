@@ -10,6 +10,8 @@ import { OrderHistoryModal } from "@/components/OrderHistoryModal";
 import { buildVietQrUrl } from "@/lib/vietqr";
 import { SettingsPage, SettingsModal, type StoreSettingsData } from "./Settings";
 import { SidebarNavigation, MobileNavigation, NAV_ITEMS } from "@/components/Navigation";
+import { ImportInvoiceModal } from "@/components/ImportInvoiceModal";
+import { PurchaseOrderDetailModal } from "@/components/PurchaseOrderDetailModal";
 import { cancelOrder, createOrder, createPurchaseOrder, deleteProduct as deleteSupabaseProduct, getStoreSettings, insertProduct, insertSupplier, listOrders, listProducts, listPurchaseOrders, listSuppliers, removeProductImage, storagePathFromPublicUrl, updateProduct, uploadProductImage, updateStoreSettings, type SupabasePurchaseOrder, type SupabaseSupplier } from "@/lib/supabase";
 import {
   AlertTriangle, ArrowDownToLine, ArrowUpRight, BarChart3, Bell, Boxes, Check, ChevronDown,
@@ -344,6 +346,8 @@ export default function Home() {
   const [suppliers, setSuppliers] = useState<SupabaseSupplier[]>([]);
   const [purchaseOrders, setPurchaseOrders] = useState<SupabasePurchaseOrder[]>([]);
   const [newSupplierModal, setNewSupplierModal] = useState(false);
+  const [importInvoiceModal, setImportInvoiceModal] = useState(false);
+  const [selectedPurchaseOrder, setSelectedPurchaseOrder] = useState<SupabasePurchaseOrder | null>(null);
   const [supabaseReady, setSupabaseReady] = useState(false);
 
   useEffect(() => {
@@ -785,11 +789,25 @@ export default function Home() {
       )}
       {active === "dashboard" && <Dashboard period={period} setPeriod={setPeriod} />}
       {active === "products" && <Inventory products={products} latestImportDates={latestImportDates} onAdd={() => setProductModal({ mode: "add" })} onEdit={product => setProductModal({ mode: "edit", product })} onDelete={removeProduct} onMenu={setProductMenu} productMenu={productMenu} />}
-      {active === "suppliers" && <Suppliers products={products} suppliers={suppliers} purchaseOrders={purchaseOrders} onAdd={() => setSupplierModal(true)} onAddSupplier={() => setNewSupplierModal(true)} />}
+      {active === "suppliers" && <Suppliers products={products} suppliers={suppliers} purchaseOrders={purchaseOrders} onAdd={() => setSupplierModal(true)} onAddSupplier={() => setNewSupplierModal(true)} onImportAi={() => setImportInvoiceModal(true)} onSelectOrder={order => setSelectedPurchaseOrder(order)} />}
       {active === "settings" && <SettingsPage storeInfo={storeInfo} onEdit={kind => { if (kind === "orders") setOrdersModal(true); else setSettingsModal(kind); }} />}
       {productModal && <ProductModal mode={productModal.mode} product={productModal.product} onClose={() => setProductModal(null)} onSave={saveProduct} />}
       {supplierModal && <SupplierModal products={products} suppliers={suppliers} onClose={() => setSupplierModal(false)} onSave={(supplierName, items, supplierId, note) => handleSavePurchaseOrder(supplierName, items, supplierId, note)} onAddSupplier={() => setNewSupplierModal(true)} />}
       {newSupplierModal && <NewSupplierModal onClose={() => setNewSupplierModal(false)} onSave={handleAddSupplier} />}
+      {selectedPurchaseOrder && <PurchaseOrderDetailModal order={selectedPurchaseOrder} onClose={() => setSelectedPurchaseOrder(null)} />}
+      {importInvoiceModal && (
+        <ImportInvoiceModal
+          onClose={() => setImportInvoiceModal(false)}
+          onSuccess={async () => {
+            const { data: updatedProds } = await listProducts();
+            if (updatedProds) setProducts(updatedProds.map(toUiProduct));
+            const { data: updatedPOs } = await listPurchaseOrders();
+            if (updatedPOs) setPurchaseOrders(updatedPOs);
+            const { data: updatedSupps } = await listSuppliers();
+            if (updatedSupps) setSuppliers(updatedSupps);
+          }}
+        />
+      )}
       {settingsModal && <SettingsModal kind={settingsModal} info={storeInfo} onClose={() => setSettingsModal(null)} onSave={handleSaveStoreSettings} />}
       {ordersModal && <OrderHistoryModal storeInfo={storeInfo} cashier={isStaff ? "Nhân viên POS" : `Quản lý (${fullName})`} onClose={() => setOrdersModal(false)} onReprint={reOrder => { setCurrentOrderCode(reOrder.order_code); setPayment(reOrder.payment_method || "Chuyển khoản"); setBillCart((reOrder.order_items || []).map((item: any) => ({ id: item.product_id, name: item.product_name, price: Number(item.unit_price || 0), qty: Number(item.quantity || 1), selectedUnit: item.unit || "Kg" }))); setShowBill(true); }} onRefreshProducts={() => listProducts().then(({ data }) => data && setProducts(data.map(toUiProduct)))} />}
     </main><MobileNavigation activeTab={active} onTabChange={handleTabChange} />
@@ -1379,21 +1397,24 @@ function ProductModal({ mode, product, onClose, onSave }: { mode: "add" | "edit"
   );
 }
 
-function Suppliers({ products, suppliers, purchaseOrders, onAdd, onAddSupplier }: { products: Product[]; suppliers: SupabaseSupplier[]; purchaseOrders: SupabasePurchaseOrder[]; onAdd: () => void; onAddSupplier: () => void }) {
+function Suppliers({ products, suppliers, purchaseOrders, onAdd, onAddSupplier, onImportAi, onSelectOrder }: { products: Product[]; suppliers: SupabaseSupplier[]; purchaseOrders: SupabasePurchaseOrder[]; onAdd: () => void; onAddSupplier: () => void; onImportAi: () => void; onSelectOrder: (po: SupabasePurchaseOrder) => void }) {
   const totalCost = purchaseOrders.reduce((sum, po) => sum + Number(po.total_amount || 0), 0);
   const totalCostText = totalCost > 0 ? (totalCost / 1000000).toFixed(1).replace(".", ",") + " triệu" : "0đ";
 
   return (
     <div className="w-full flex-1 p-4 md:p-6 lg:p-8 space-y-6 pb-28 lg:pb-12">
 
-      <div className="supplier-hero mb-6 flex justify-between items-center">
+      <div className="supplier-hero mb-6 flex justify-between items-center flex-wrap gap-3">
         <div>
           <span className="eyebrow">Chi phí nhập kho</span>
           <strong>{totalCostText} <small>VNĐ</small></strong>
           <p>{purchaseOrders.length} phiếu nhập · {suppliers.length} nhà cung cấp</p>
         </div>
-        <div className="flex items-center gap-4">
-          <button className="primary-button shadow-md" onClick={onAdd}><Plus size={17} /> Tạo phiếu nhập</button>
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <button type="button" className="outline-button bg-white border border-emerald-300 text-emerald-700 hover:bg-emerald-50 shadow-sm flex items-center gap-2 px-3.5 py-2.5 rounded-xl font-bold text-xs transition-all cursor-pointer" onClick={onImportAi}>
+            <Sparkles size={16} className="text-emerald-600" /> Import Hóa Đơn AI
+          </button>
+          <button type="button" className="primary-button shadow-md cursor-pointer" onClick={onAdd}><Plus size={17} /> Tạo phiếu nhập</button>
           <div className="supplier-sprout hidden sm:flex"><Leaf size={34} /></div>
         </div>
       </div>
@@ -1424,14 +1445,14 @@ function Suppliers({ products, suppliers, purchaseOrders, onAdd, onAddSupplier }
             <p className="text-slate-400 text-xs py-4">Chưa có phiếu nhập nào.</p>
           ) : (
             purchaseOrders.slice(0, 6).map(po => (
-              <div className="supplier-row" key={po.id || po.purchase_code}>
-                <div className="supplier-avatar bg-emerald-50 text-emerald-600"><ClipboardList size={18} /></div>
+              <div className="supplier-row hover:bg-slate-50/80 transition-colors cursor-pointer group" key={po.id || po.purchase_code} onClick={() => onSelectOrder(po)}>
+                <div className="supplier-avatar bg-emerald-50 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-colors"><ClipboardList size={18} /></div>
                 <div>
-                  <strong>{po.purchase_code || `PO-${po.id}`} · {po.supplier_name}</strong>
+                  <strong className="group-hover:text-emerald-800 transition-colors">{po.purchase_code || `PO-${po.id}`} · {po.supplier_name}</strong>
                   <span>{new Date(po.created_at || Date.now()).toLocaleString("vi-VN")}</span>
                 </div>
                 <div className="supplier-amount">
-                  <b className="text-emerald-700">{formatMoney(Number(po.total_amount))}</b>
+                  <b className="text-emerald-700 font-mono">{formatMoney(Number(po.total_amount))}</b>
                   <Badge tone="green">Đã hoàn tất</Badge>
                 </div>
               </div>

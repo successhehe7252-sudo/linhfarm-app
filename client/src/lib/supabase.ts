@@ -1,4 +1,3 @@
-
 import { createClient } from "@supabase/supabase-js";
 
 const env = (typeof import.meta !== "undefined" && (import.meta as any).env) ? (import.meta as any).env : {};
@@ -44,6 +43,8 @@ export type SupabasePurchaseOrder = {
   supplier_id?: number | null;
   supplier_name: string;
   total_amount: number;
+  sub_total?: number | null;
+  vat_amount?: number | null;
   note?: string | null;
   status: string;
   received_at?: string;
@@ -183,37 +184,63 @@ export const listSuppliers = async () => supabase.from("suppliers").select("*").
 export const insertSupplier = async (supplier: Omit<SupabaseSupplier, "id">) => supabase.from("suppliers").insert(supplier).select("*").single();
 export const getStoreSettings = async () => supabase.from("store_settings").select("*").eq("id", 1).single();
 export const updateStoreSettings = async (settings: Record<string, any>) => supabase.from("store_settings").update(settings).eq("id", 1).select("*").single();
-export const listPurchaseOrders = async () => supabase.from("purchase_orders").select("*, purchase_order_items(product_id, quantity, import_price, created_at)").order("created_at", { ascending: false });
+
+export const listPurchaseOrders = async () =>
+  supabase
+    .from("purchase_orders")
+    .select(`
+      *,
+      supplier:suppliers(*),
+      items:purchase_order_items(
+        *,
+        product:products(*)
+      )
+    `)
+    .order("created_at", { ascending: false });
+
 export const createPurchaseOrder = async (
   supplierName: string,
-  items: { productId: number; qty: number; unitCost: number }[],
+  items: { productId: number; qty: number; unitCost: number; unit?: string; name?: string }[],
   supplierId?: number | null,
-  note?: string
+  note?: string,
+  subTotal?: number,
+  vatAmount?: number,
+  totalAmountCustom?: number
 ) => {
-  const rpcRes = await supabase.rpc("create_purchase_order_with_items", {
-    p_supplier_name: supplierName,
-    p_items: items,
-    p_supplier_id: supplierId ?? null,
-    p_note: note ?? "",
-  });
-
-  if (!rpcRes.error) {
-    return rpcRes;
-  }
-
-  console.warn("[Supabase] create_purchase_order_with_items RPC unavailable or failed, executing client-side transaction:", rpcRes.error.message);
-
-  const totalAmount = items.reduce((sum, item) => sum + item.qty * item.unitCost, 0);
+  const totalAmount = totalAmountCustom ?? items.reduce((sum, item) => sum + item.qty * item.unitCost, 0);
   const code = "PO-" + new Date().getDate().toString().padStart(2, "0") + (new Date().getMonth() + 1).toString().padStart(2, "0") + "-" + Math.floor(100 + Math.random() * 900);
 
-  const { data: po, error: poErr } = await supabase.from("purchase_orders").insert({
+  const fullPayload: Record<string, any> = {
     purchase_code: code,
     supplier_id: supplierId ?? null,
     supplier_name: supplierName,
     total_amount: totalAmount,
+    sub_total: subTotal ?? totalAmount,
+    vat_amount: vatAmount ?? 0,
     note: note ?? "",
     status: "received",
-  }).select("*").single();
+  };
+
+  let po: any = null;
+  let poErr: any = null;
+
+  const res1 = await supabase.from("purchase_orders").insert(fullPayload).select("*").single();
+  if (res1.error) {
+    console.warn("[Supabase] Insert purchase_orders with sub_total/vat_amount failed, falling back:", res1.error.message);
+    const fallbackRes = await supabase.from("purchase_orders").insert({
+      purchase_code: code,
+      supplier_id: supplierId ?? null,
+      supplier_name: supplierName,
+      total_amount: totalAmount,
+      note: note ?? "",
+      status: "received",
+    }).select("*").single();
+    po = fallbackRes.data;
+    poErr = fallbackRes.error;
+  } else {
+    po = res1.data;
+    poErr = res1.error;
+  }
 
   if (poErr || !po) {
     return { data: null, error: poErr };
@@ -224,8 +251,19 @@ export const createPurchaseOrder = async (
     product_id: item.productId,
     quantity: item.qty,
     import_price: item.unitCost,
+    total_price: item.qty * item.unitCost,
   }));
-  await supabase.from("purchase_order_items").insert(lineItems);
+  const { error: itemsErr } = await supabase.from("purchase_order_items").insert(lineItems);
+  if (itemsErr) {
+    console.warn("[Supabase] Insert purchase_order_items with total_price failed, retrying basic fields:", itemsErr.message);
+    const fallbackLineItems = items.map(item => ({
+      purchase_order_id: po.id,
+      product_id: item.productId,
+      quantity: item.qty,
+      import_price: item.unitCost,
+    }));
+    await supabase.from("purchase_order_items").insert(fallbackLineItems);
+  }
 
   for (const item of items) {
     const { data: prod } = await supabase.from("products").select("*").eq("id", item.productId).single();
