@@ -1703,13 +1703,47 @@ function BillModal({ total, cart, payment, orderCode, storeInfo, cashier, onClos
     if (!billRef.current) return;
     setCopying(true);
     try {
-      const blob = await toBlob(billRef.current, { cacheBust: true, pixelRatio: 2, style: { transform: 'none', margin: '0' } });
-      if (!blob) throw new Error("Không thể tạo dữ liệu ảnh");
       if (navigator.clipboard && typeof ClipboardItem !== "undefined") {
-        await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
-        toast.success("Đã copy ảnh hóa đơn! Bạn có thể dán (Ctrl+V) vào Zalo / Messenger.");
+        try {
+          const blobPromise = toBlob(billRef.current, {
+            cacheBust: true,
+            pixelRatio: 2,
+            style: { transform: 'none', margin: '0' }
+          }).then(blob => {
+            if (!blob) throw new Error("Không thể tạo dữ liệu ảnh");
+            return blob;
+          });
+
+          await navigator.clipboard.write([new ClipboardItem({ "image/png": blobPromise })]);
+          toast.success("Đã copy ảnh hóa đơn! Bạn có thể dán (Ctrl+V) vào Zalo / Messenger.");
+          return;
+        } catch (clipboardErr: any) {
+          console.warn("Direct clipboard write failed, attempting fallback:", clipboardErr);
+          
+          const blob = await toBlob(billRef.current, {
+            cacheBust: true,
+            pixelRatio: 2,
+            style: { transform: 'none', margin: '0' }
+          });
+          if (!blob) throw new Error("Không thể tạo dữ liệu ảnh");
+
+          const file = new File([blob], `hoa-don-${displayCode}.png`, { type: "image/png" });
+          if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            await navigator.share({
+              files: [file],
+              title: `Hóa đơn ${displayCode}`,
+            });
+            toast.info("Đã mở menu chia sẻ/lưu ảnh hóa đơn.");
+            return;
+          }
+
+          await downloadBillImage();
+          toast.info("Trình duyệt không hỗ trợ copy ảnh trực tiếp, đã tự động tải ảnh về máy.");
+          return;
+        }
       } else {
-        toast.error("Trình duyệt không hỗ trợ copy ảnh trực tiếp, hãy dùng nút Tải ảnh");
+        await downloadBillImage();
+        toast.info("Trình duyệt không hỗ trợ copy ảnh trực tiếp, đã tự động tải ảnh về máy.");
       }
     } catch (err: any) {
       toast.error(`Lỗi copy ảnh hóa đơn: ${err?.message || "Không thể copy ảnh"}`);
@@ -1737,7 +1771,7 @@ function BillModal({ total, cart, payment, orderCode, storeInfo, cashier, onClos
               src={assets.logo}
               alt="LinhFarm Logo"
               crossOrigin="anonymous"
-              className="w-14 h-14 rounded-full object-cover overflow-hidden border border-slate-100 shadow-sm mx-auto mb-2"
+              className="w-14 h-14 rounded-full object-cover overflow-hidden border border-slate-200 mx-auto mb-2"
               onError={e => { e.currentTarget.src = "/logo.webp"; }}
             />
             <strong className="text-lg font-bold text-slate-800 tracking-tight leading-tight">LinhFarm</strong>
@@ -1768,7 +1802,7 @@ function BillModal({ total, cart, payment, orderCode, storeInfo, cashier, onClos
 
             {payment === "Chuyển khoản" ? (
               <div className="flex flex-col items-center justify-center mt-3">
-                <div className="w-36 h-36 rounded-lg border border-slate-100 p-1 bg-white shadow-sm flex items-center justify-center">
+                <div className="w-36 h-36 rounded-lg border border-slate-200 p-1 bg-white flex items-center justify-center">
                   <img
                     src={qrUrl}
                     alt="VietQR Code"
