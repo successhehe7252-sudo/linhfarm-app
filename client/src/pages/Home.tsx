@@ -1671,6 +1671,53 @@ function QrPaymentModal({
   );
 }
 
+async function waitForReceiptAssets(container: HTMLElement): Promise<void> {
+  const images = Array.from(container.querySelectorAll("img"));
+
+  await Promise.all(
+    images.map(async (img) => {
+      if (!img.complete) {
+        await new Promise((resolve) => {
+          img.addEventListener("load", resolve, { once: true });
+          img.addEventListener("error", resolve, { once: true });
+        });
+      }
+
+      if (img.decode) {
+        try {
+          await img.decode();
+        } catch {
+          // ignore decode errors (e.g. image already decoded or unsupported format)
+        }
+      }
+    })
+  );
+
+  if (document.fonts?.ready) {
+    try {
+      await document.fonts.ready;
+    } catch {
+      // ignore font loading errors
+    }
+  }
+}
+
+async function generateReceiptBlob(container: HTMLElement): Promise<Blob> {
+  await waitForReceiptAssets(container);
+
+  const blob = await toBlob(container, {
+    cacheBust: true,
+    pixelRatio: 2,
+    style: { transform: 'none', margin: '0' }
+  });
+
+  if (!blob) {
+    throw new Error("Không thể tạo dữ liệu ảnh hóa đơn");
+  }
+
+  return blob;
+}
+
 function BillModal({ total, cart, payment, orderCode, storeInfo, cashier, onClose }: { total: number; cart: CartItem[]; payment: string; orderCode: string; storeInfo: StoreSettingsData; cashier?: string; onClose: () => void }) {
   const billRef = useRef<HTMLDivElement>(null);
   const [downloading, setDownloading] = useState(false);
@@ -1686,11 +1733,13 @@ function BillModal({ total, cart, payment, orderCode, storeInfo, cashier, onClos
     if (!billRef.current) return;
     setDownloading(true);
     try {
-      const dataUrl = await toPng(billRef.current, { cacheBust: true, pixelRatio: 2, style: { transform: 'none', margin: '0' } });
+      const blob = await generateReceiptBlob(billRef.current);
+      const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.download = `hoa-don-${displayCode}.png`;
-      link.href = dataUrl;
+      link.href = url;
       link.click();
+      URL.revokeObjectURL(url);
       toast.success("Đã tải ảnh hóa đơn về máy!");
     } catch (err: any) {
       toast.error(`Không thể tạo ảnh hóa đơn: ${err?.message || "Lỗi thiết bị"}`);
@@ -1705,14 +1754,7 @@ function BillModal({ total, cart, payment, orderCode, storeInfo, cashier, onClos
     try {
       if (navigator.clipboard && typeof ClipboardItem !== "undefined") {
         try {
-          const blobPromise = toBlob(billRef.current, {
-            cacheBust: true,
-            pixelRatio: 2,
-            style: { transform: 'none', margin: '0' }
-          }).then(blob => {
-            if (!blob) throw new Error("Không thể tạo dữ liệu ảnh");
-            return blob;
-          });
+          const blobPromise = generateReceiptBlob(billRef.current);
 
           await navigator.clipboard.write([new ClipboardItem({ "image/png": blobPromise })]);
           toast.success("Đã copy ảnh hóa đơn! Bạn có thể dán (Ctrl+V) vào Zalo / Messenger.");
@@ -1720,12 +1762,7 @@ function BillModal({ total, cart, payment, orderCode, storeInfo, cashier, onClos
         } catch (clipboardErr: any) {
           console.warn("Direct clipboard write failed, attempting fallback:", clipboardErr);
           
-          const blob = await toBlob(billRef.current, {
-            cacheBust: true,
-            pixelRatio: 2,
-            style: { transform: 'none', margin: '0' }
-          });
-          if (!blob) throw new Error("Không thể tạo dữ liệu ảnh");
+          const blob = await generateReceiptBlob(billRef.current);
 
           const file = new File([blob], `hoa-don-${displayCode}.png`, { type: "image/png" });
           if (navigator.canShare && navigator.canShare({ files: [file] })) {
@@ -1771,6 +1808,8 @@ function BillModal({ total, cart, payment, orderCode, storeInfo, cashier, onClos
               src={assets.logo}
               alt="LinhFarm Logo"
               crossOrigin="anonymous"
+              loading="eager"
+              decoding="sync"
               className="w-14 h-14 rounded-full object-cover overflow-hidden border border-slate-200 mx-auto mb-2"
               onError={e => { e.currentTarget.src = "/logo.webp"; }}
             />
@@ -1807,6 +1846,8 @@ function BillModal({ total, cart, payment, orderCode, storeInfo, cashier, onClos
                     src={qrUrl}
                     alt="VietQR Code"
                     crossOrigin="anonymous"
+                    loading="eager"
+                    decoding="sync"
                     className="w-full h-full object-contain"
                   />
                 </div>
